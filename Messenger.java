@@ -39,6 +39,23 @@ public class Messenger {
 	}
 	
 	public void sendMessage(Message message){
+		if (message.getReceiver() == BROADCAST) {
+			for (Integer receiver : addrMap.keySet()) {
+				message.setReceiver(receiver);
+				try {
+					Socket socket = getSocket(receiver);
+					OutputStream out = socket.getOutputStream();
+					OutputStreamWriter writer = new OutputStreamWriter(out, "UTF-8");
+					BufferedWriter bufferedWriter = new BufferedWriter(writer);
+					bufferedWriter.write(message.translate());
+					bufferedWriter.flush();
+				}
+				catch(IOException ex) {
+					System.out.println("Broadcasting Message Error!");
+				}
+			}
+		}
+		else {
 		try {
 			Socket socket = getSocket(message.getReceiver());
 			OutputStream out = socket.getOutputStream();
@@ -49,6 +66,7 @@ public class Messenger {
 		}
 		catch(IOException ex) {
 			System.out.println("Sending Message Error!");
+		}
 		}
 	}	
 }

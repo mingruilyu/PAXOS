@@ -1,7 +1,5 @@
 package server;
 
-import java.io.*;
-import java.net.Socket;
 import java.util.LinkedList;
 import java.util.List;
 
@@ -25,9 +23,9 @@ public class Server {
 	}
 	
 	public void run() {
-		Message message;
+		Message message = null;
 		String command;
-		Message reply;
+		Message reply = null;
 		Message broadcast;
 		synchronized(this) {
 			if(!messageList.isEmpty()) 
@@ -38,6 +36,7 @@ public class Server {
 			if(!commandList.isEmpty())
 				command = commandList.remove(0);
 		}
+		if (message == null) return;
 		switch(message.getType()) {
 		case ACCEPT:
 			AcceptMessage acceptMessage = (AcceptMessage)message;
@@ -49,7 +48,7 @@ public class Server {
 			if (currentBallot == null) {
 				reply = new ConfirmMessage(MessageType.CONFIRM, 
 								   serverNo, 
-								   acceptMessage.getSender(),
+								   message.getSender(),
 								   prepareMessage.getBallot(), 
 								   null, 
 								   currentVal);
@@ -58,11 +57,11 @@ public class Server {
 			else {
 				reply = new ConfirmMessage(MessageType.CONFIRM, 
 						   serverNo, 
-						   acceptMessage.getSender(),
+						   message.getSender(),
 						   prepareMessage.getBallot(), 
 						   currentBallot, 
 						   currentVal);
-				if (currentBallot.compareTo(acceptMessage.getBallot()) < 0)
+				if (currentBallot.compareTo(prepareMessage.getBallot()) < 0)
 					currentBallot = prepareMessage.getBallot();
 			}
 			break;
@@ -98,8 +97,6 @@ public class Server {
 			}
 			else {
 				if (confirmMessage.getAcceptBallot().compareTo(currentBallot) < 0) {
-					Ballot ballot;
-					int logPosition;
 					reply = new AcceptMessage(MessageType.ACCEPT, 
 							serverNo,
 							Messenger.BROADCAST,
@@ -120,7 +117,7 @@ public class Server {
 	public static void main(String[] args) {
 		Server server = new Server();
 		while(true) {
-			
+			server.run();
 		}
 	}
 	

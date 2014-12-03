@@ -26,7 +26,7 @@ public class Dispatcher extends Thread{
 		while (true) {
 			try {
 				Socket connection = serverSocket.accept();
-				Callable<Void> task = new NewMessageTask(connection);
+				Callable<Void> task = new NewMessageTask(connection, messageList);
 				threadPool.submit(task);
 			} 
 			catch (IOException ex) {}
