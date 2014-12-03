@@ -15,12 +15,12 @@ public class Server {
 	Messenger messenger;
 	List<Message> messageList = new LinkedList<Message>();
 	List<String> commandList = new LinkedList<String>();
-	CommandInterpreter commandInterpreter;
+	Terminal commandInterpreter;
 	public Server(){
 		messenger = Messenger.getMessenger();
 		Thread dispatcher = new Dispatcher(messageList);
 		dispatcher.run();
-		Thread commandInterpreter = new CommandInterpreter();
+		Thread commandInterpreter = new Terminal(commandList);
 		commandInterpreter.run();
 	}
 	
@@ -82,7 +82,7 @@ public class Server {
 			ConfirmMessage confirmMessage = (ConfirmMessage)message;
 			if (confirmMessage.getAcceptValue() == NULL_VALUE) {
 				if (confirmMessage.getAcceptBallot().compareTo(currentBallot) > 0) {
-					updateBallot(confirmMessage.getAcceptBallot);
+					updateBallot(confirmMessage.getAcceptBallot());
 					reply = new PrepareMessage(MessageType.PREPARE,
 								serverNo,
 								message.getSender(),
@@ -104,7 +104,7 @@ public class Server {
 							serverNo,
 							Messenger.BROADCAST,
 							currentBallot, 
-							confirmMessage.getLogPosition());
+							confirmMessage.getAcceptValue());
 				}
 			}
 			break;
@@ -124,8 +124,8 @@ public class Server {
 		}
 	}
 	
-	private void updateBallot() {
-		
+	private void updateBallot(Ballot ballot) {
+		currentBallot.ballotNumber = ballot.getBallotNumber() + 1;
 	}
 	
 	public void interpret(String s) {
