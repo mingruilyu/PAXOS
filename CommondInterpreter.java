@@ -16,7 +16,7 @@ public class CommondInterpreter {
 						depositCommand[1].trim().length() - 1);
 				try {
 					double value = Double.parseDouble(valueString);
-					// call deposit method
+					// ?? call deposit method
 					System.out.println("deposit  " + value);
 				} catch (NumberFormatException ex) {
 					handleInvalidInput();
@@ -33,7 +33,7 @@ public class CommondInterpreter {
 						withdrawCommand[1].trim().length() - 1);
 				try {
 					double value = Double.parseDouble(valueString);
-					// call withdraw method
+					// ?? call withdraw method
 					System.out.println("withdraw  " + value);
 				} catch (NumberFormatException ex) {
 					handleInvalidInput();
@@ -45,7 +45,7 @@ public class CommondInterpreter {
 
 		case 'f':
 			if (s.equals("fail()")) {
-				// fail the server
+				// ?? fail the server
 				System.out.println("fail the server");
 			} else
 				handleInvalidInput();
@@ -53,7 +53,7 @@ public class CommondInterpreter {
 			break;
 		case 'b':
 			if (s.equals("balance()")) {
-				// get Balance
+				// ?? get Balance
 				System.out.println("get Balance ");
 			} else {
 				handleInvalidInput();
@@ -61,7 +61,7 @@ public class CommondInterpreter {
 			break;
 		case 'u':
 			if (s.equals("unfail()")) {
-				// unfail the server
+				// ?? unfail the server
 				System.out.println("unfail the server");
 			} else {
 				handleInvalidInput();
@@ -73,6 +73,7 @@ public class CommondInterpreter {
 	}
 
 	public void handleInvalidInput() {
+		//  ?? handle invalid input
 		System.out.println("invalid input");
 	}
 
