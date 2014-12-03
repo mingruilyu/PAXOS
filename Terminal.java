@@ -5,7 +5,7 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.util.List;
 
-public class Terminal implements Runnable {
+public class Terminal extends Thread {
 
 	List<String> commandList;
 	public Terminal(List<String> list ){
