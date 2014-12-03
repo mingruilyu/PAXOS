@@ -1,3 +1,5 @@
+package server;
+
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.File;
@@ -11,7 +13,7 @@ public class Log {
 	LinkedList<LogEntry> logs = new LinkedList<LogEntry>();
 	boolean synchFlag;
 
-	Log() {
+	public Log() {
 		load();
 	}
 
@@ -58,10 +60,10 @@ public class Log {
 		double sum = 0;
 		for (LogEntry e : logs) {
 			switch (e.operation) {
-			case Withdraw:
+			case WITHDRAW:
 				sum = sum - e.operand;
 				break;
-			case Deposit:
+			case DEPOSIT:
 				sum = sum + e.operand;
 				break;
 

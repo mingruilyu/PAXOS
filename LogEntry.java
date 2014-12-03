@@ -1,3 +1,4 @@
+package server;
 public class LogEntry {
 	Operation operation;
 	double operand;
