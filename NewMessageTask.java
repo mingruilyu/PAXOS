@@ -2,11 +2,12 @@ package server;
 
 import java.io.InputStreamReader;
 import java.net.Socket;
+import java.util.List;
 import java.util.concurrent.*;
 
-public class WriteRecvBufferTask implements Callable<Void>{
+public class NewMessageTask implements Callable<Void>{
 	private Socket connection;
-	public WriteRecvBufferTask(Socket connection) {
+	public NewMessageTask(Socket connection) {
 		this.connection = connection;
 	}
 	public Void call() {
@@ -14,9 +15,10 @@ public class WriteRecvBufferTask implements Callable<Void>{
 		StringBuilder message = new StringBuilder();
 		for (int ch = reader.read(); ch != -1; ch = reader.read())
 			message.append((char)ch);
-		message
+		Message newMessage = Message.parseMessage(message.toString());
 		synchronized(this) {
-			List<Message>Server.getServer().getMessageList();
+			List<Message> messageList = Server.getServer().getMessageList();
+			messageList.add(newMessage);
 		}
 	}
 }

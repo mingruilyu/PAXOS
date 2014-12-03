@@ -8,6 +8,11 @@ public class Server {
 	int serverNo;
 	Ballot currentBallot;
 	boolean syncFlag;
+	
+	private Server(){
+		Thread 
+	}
+	
 	private void updateBallot() {
 		
 	}
