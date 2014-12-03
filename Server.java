@@ -12,13 +12,7 @@ public class Server {
 		
 	}
 	Communication communication;
-	public Message parseMessage() {
-		
-	}
 	public void interpretCommandLine() {
-		
-	}
-	public void sendMessage(Message message) {
 		
 	}
 	private Message generateAcceptMsg() {
