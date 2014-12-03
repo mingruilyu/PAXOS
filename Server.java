@@ -1,5 +1,8 @@
 package server;
 
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
 import java.util.LinkedList;
 import java.util.List;
 
@@ -120,13 +123,46 @@ public class Server {
 	public static void 
 
 	public static void main(String[] args) {
-		
-		Server server = new Server(args);
+		Server server;
+		String serverNumberString;
+		if(args.length==1){
+			serverNumberString = args[0];
+		}		
+		while(true){			
+			if(serverNumberString!=null){
+				try {
+					int value = Integer.parseInt(serverNumberString);
+					server = new Server(value);
+					break;
+				} catch (NumberFormatException ex) {
+					serverNumberString = getCorrestInput();
+				}
+			}
+			else serverNumberString = getCorrestInput();;
+		}
+			 
 		while(true) {
 			server.run();
 		}
 	}
 	
+	private static String getCorrestInput() {
+		System.out.println("Please enter the server number:");
+		BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
+		while (true) {
+			String command = null;		
+			try {
+				command = br.readLine();
+				return command;
+			} catch (IOException ioe) {
+				System.out.println("IO error trying to read your command!");
+				System.exit(1);
+			}
+
+		}
+		return null;
+	}
+
 	private void updateBallot(Ballot ballot) {
 		currentBallot.ballotNumber = ballot.getBallotNumber() + 1;
 	}
