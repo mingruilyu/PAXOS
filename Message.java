@@ -12,6 +12,10 @@ abstract class Message {
 		return sender;
 	}
 
+	public void setSender(int sender) {
+		this.sender = sender;
+	}
+
 	public int getReceiver() {
 		return receiver;
 	}

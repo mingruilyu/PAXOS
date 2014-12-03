@@ -13,15 +13,6 @@ public class Test {
 		log.dump();*/
 		
 		
-		List<String> l = new LinkedList<String>();
-		Terminal t = new Terminal(l);
-		new Thread(t).start();
-		while(true){
-			if(!l.isEmpty())
-				System.out.println(l.get(0));
-		}
-			
-		
 		//test for command interpreter
 			
 		
