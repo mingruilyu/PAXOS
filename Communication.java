@@ -3,12 +3,16 @@ package server;
 import java.io.*;
 import java.net.*;
 import java.util.*;
+import java.util.concurrent.*;
 
 
 class Communication {
 	final static int PORT = 5000;
+	final static int THREAD_POOL_SIZE = 10;
 	static private Communication messengerInstance;
 	Map<Integer, String> addrMap;
+	ExecutorService pool = Executors.newFixedThreadPool(THREAD_POOL_SIZE);
+	ServerSocket serverSocket;
 	/*OutputStream outputStream;
 	InputStream inputStream;
 	OutputStreamWriter outputStreamWriter;
@@ -16,6 +20,12 @@ class Communication {
 	BufferedReader bufferedReader;
 	BufferedWriter bufferedWriter;*/
 	private Communication() {
+		try {
+			serverSocket = new ServerSocket(PORT);
+		}
+		catch (IOException ex) {
+			System.out.println("could not start server!");
+		}
 		addrMap = new HashMap<Integer, String>();
 	}
 	
@@ -49,7 +59,16 @@ class Communication {
 		}
 	}
 	
-	public void 
+	public void receiveMessage() {
+		while (true) {
+			try {
+				Socket connection = serverSocket.accept();
+				Callable<Void> task = new DaytimeTask(connection);
+				pool.submit(task);
+			} 
+			catch (IOException ex) {}
+		}
+	}
 	
 	public Message parseMessage(String message) {
 		//fdff
