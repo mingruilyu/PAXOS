@@ -68,7 +68,7 @@ public class CommondInterpreter {
 			}
 			break;
 		default:
-
+			handleInvalidInput();
 		}
 	}
 
