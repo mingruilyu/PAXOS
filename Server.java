@@ -4,7 +4,6 @@ import java.util.LinkedList;
 import java.util.List;
 
 public class Server {
-	static final int NULL_VALUE = -1;
 	Log log;
 	int serverNo;
 	Ballot currentBallot;
@@ -14,7 +13,10 @@ public class Server {
 	List<Message> messageList = new LinkedList<Message>();
 	List<String> commandList = new LinkedList<String>();
 	Terminal commandInterpreter;
-	public Server(){
+	public Server(int serverNo){
+		this.serverNo = serverNo;
+		currentBallot = null;
+		currentVal = log.getLogPosition();
 		messenger = Messenger.getMessenger();
 		Thread dispatcher = new Dispatcher(messageList);
 		dispatcher.run();
@@ -24,9 +26,8 @@ public class Server {
 	
 	public void run() {
 		Message message = null;
-		String command;
+		String command = null;
 		Message reply = null;
-		Message broadcast;
 		synchronized(this) {
 			if(!messageList.isEmpty()) 
 				message = messageList.remove(0);
@@ -36,7 +37,9 @@ public class Server {
 			if(!commandList.isEmpty())
 				command = commandList.remove(0);
 		}
-		if (message == null) return;
+		if (message == null && command == null) return;
+		else if (command != null)
+			interpret(command);
 		switch(message.getType()) {
 		case ACCEPT:
 			AcceptMessage acceptMessage = (AcceptMessage)message;
@@ -79,7 +82,7 @@ public class Server {
 			break;
 		case CONFIRM:
 			ConfirmMessage confirmMessage = (ConfirmMessage)message;
-			if (confirmMessage.getAcceptValue() == NULL_VALUE) {
+			if (confirmMessage.getAcceptValue() == Message.NULL_VALUE) {
 				if (confirmMessage.getAcceptBallot().compareTo(currentBallot) > 0) {
 					updateBallot(confirmMessage.getAcceptBallot());
 					reply = new PrepareMessage(MessageType.PREPARE,
@@ -113,9 +116,12 @@ public class Server {
 		if (reply != null)
 			messenger.sendMessage(reply);
 	}
+	
+	public static void 
 
 	public static void main(String[] args) {
-		Server server = new Server();
+		
+		Server server = new Server(args);
 		while(true) {
 			server.run();
 		}

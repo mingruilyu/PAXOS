@@ -15,6 +15,8 @@ abstract class Message {
 	 */
 	final static char DELIMIT = '\t';
 	final static char MSG_END = '$';
+
+	final static int NULL_VALUE = -1;
 	int sender;
 	int receiver;
 

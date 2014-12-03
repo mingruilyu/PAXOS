@@ -17,7 +17,10 @@ public class Log {
 	public Log() {
 		load();
 	}
-
+	public int getLogPosition() {
+		return logs.size();
+	}
+	
 	private void load() {
 
 		try {
