@@ -10,6 +10,8 @@ abstract class Message {
 	 * 	DES		receiver's server no
 	 * 	TYPE	message type
 	 * 	BODY	see subclasses
+	 * 
+	 * 
 	 * */
 	int sender;
 	int receiver;
