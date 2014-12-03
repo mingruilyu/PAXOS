@@ -1,5 +1,7 @@
+package server;
+
 public enum Operation {
-	Withdraw, Deposit;
+	WITHDRAW, DEPOSIT;
 
 	public static Operation getEnumFromString(String string) {
 		if (string != null) {
