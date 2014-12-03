@@ -7,8 +7,10 @@ import java.util.concurrent.*;
 
 public class NewMessageTask implements Callable<Void>{
 	private Socket connection;
-	public NewMessageTask(Socket connection) {
+	private List<Message> messageList;
+	public NewMessageTask(Socket connection, List<Message> messageList) {
 		this.connection = connection;
+		this.messageList = messageList;
 	}
 	public Void call() {
 		InputStreamReader reader = new InputStreamReader(connection.getInputStream());
@@ -17,7 +19,6 @@ public class NewMessageTask implements Callable<Void>{
 			message.append((char)ch);
 		Message newMessage = Message.parseMessage(message.toString());
 		synchronized(this) {
-			List<Message> messageList = Server.getServer().getMessageList();
 			messageList.add(newMessage);
 		}
 	}

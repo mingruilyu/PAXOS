@@ -3,7 +3,6 @@ package server;
 import java.io.*;
 import java.net.*;
 import java.util.*;
-import java.util.concurrent.*;
 
 
 public class Messenger {
@@ -51,8 +50,5 @@ public class Messenger {
 		catch(IOException ex) {
 			System.out.println("Sending Message Error!");
 		}
-	}
-	
-	
-	
+	}	
 }
