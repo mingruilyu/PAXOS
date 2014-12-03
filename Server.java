@@ -8,6 +8,7 @@ public class Server {
 	int serverNo;
 	Ballot currentBallot;
 	int currentVal;
+	LogEntry currentOperation;
 	boolean syncFlag;
 	Messenger messenger;
 	List<Message> messageList = new LinkedList<Message>();
@@ -117,11 +118,9 @@ public class Server {
 			messenger.sendMessage(reply);
 	}
 	
-	public static void 
-
 	public static void main(String[] args) {
 		
-		Server server = new Server(args);
+		Server server = new Server();
 		while(true) {
 			server.run();
 		}
@@ -145,7 +144,12 @@ public class Server {
 						depositCommand[1].trim().length() - 1);
 				try {
 					double value = Double.parseDouble(valueString);
-					// ?? call deposit method
+					LogEntry currentOperation = value;
+					Message newProposal = new PrepareMessage(MessageType.PREPARE,
+							serverNo,
+							Messenger.BROADCAST,
+							currentBallot);
+					messenger.sendMessage(newProposal);
 					System.out.println("deposit  " + value);
 				} catch (NumberFormatException ex) {
 					handleInvalidInput();
