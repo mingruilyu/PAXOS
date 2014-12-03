@@ -8,6 +8,20 @@ enum MessageType {
 }
 
 abstract class Message {
+
+	/*
+	 * Message Format: Field Content SRC sender's server no DES receiver's
+	 * server no TYPE message type BODY see subclasses
+	 */
+	final static char DELIMIT = '\t';
+	final static char MSG_END = '$';
+	int sender;
+	int receiver;
+
+	public void setReceiver(int receiver) {
+		this.receiver = receiver;
+	}
+
 	public int getSender() {
 		return sender;
 	}
@@ -20,19 +34,11 @@ abstract class Message {
 		return receiver;
 	}
 
+	MessageType type;
+
 	public MessageType getType() {
 		return type;
 	}
-
-	/*
-	 * Message Format: Field Content SRC sender's server no DES receiver's
-	 * server no TYPE message type BODY see subclasses
-	 */
-	final static char DELIMIT = '\t';
-	final static char MSG_END = '$';
-	int sender;
-	int receiver;
-	MessageType type;
 
 	public Message(MessageType type, int receiver) {
 		this.type = type;
