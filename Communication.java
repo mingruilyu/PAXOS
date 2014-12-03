@@ -28,6 +28,6 @@ class Communication {
 	}
 
 	public Message parseMessage(String message) {
-		
+		//fdff
 	}
 }
