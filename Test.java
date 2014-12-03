@@ -12,7 +12,7 @@ public class Test {
 		log.appendLogEntry(new LogEntry(Operation.DEPOSIT,11.8));
 		log.dump();*/
 		
-		
+		Thread Terminal = new Terminal(new LinkedList<String>());
 		//test for command interpreter
 			
 		
