@@ -6,6 +6,15 @@ enum MessageType {
     ACCEPT, PREPARE, SYNC_REQ, SYNC_ACK, CONFIRM, DECIDE
 }
 abstract class Message {
+	public int getSender() {
+		return sender;
+	}
+	public int getReceiver() {
+		return receiver;
+	}
+	public MessageType getType() {
+		return type;
+	}
 	/*	Message Format:
 	 * 	Field	Content
 	 * 	SRC		sender's server no
@@ -18,9 +27,8 @@ abstract class Message {
 	int sender;
 	int receiver;
 	MessageType type;
-	public Message(MessageType type, int sender, int receiver) {
+	public Message(MessageType type, int receiver) {
 		this.type = type;
-		this.sender = sender;
 		this.receiver = receiver;
 	}
 	public String translate() {
@@ -48,7 +56,7 @@ class AcceptMessage extends Message {
 	Ballot ballot;
 	int logPosition;
 	public AcceptMessage(MessageType type, int sender, int receiver) {
-		super(type, sender, receiver);
+		super(type, receiver);
 	}
 	public String translate() {
 		StringBuilder message = new StringBuilder();
@@ -68,7 +76,7 @@ class DecideMessage extends Message {
 	 * */
 	int logPosition;
 	public DecideMessage(MessageType type, int sender, int receiver){
-		super(type, sender, receiver);
+		super(type, receiver);
 	}
 	public String translate() {
 		StringBuilder message = new StringBuilder();
@@ -87,7 +95,7 @@ class PrepareMessage extends Message {
 	 * */
 	Ballot ballot;
 	public PrepareMessage(MessageType type, int sender, int receiver){
-		super(type, sender, receiver);
+		super(type, receiver);
 	}
 	public String translate() {
 		StringBuilder message = new StringBuilder();
@@ -112,7 +120,7 @@ class ConfirmMessage extends Message {
 	Ballot recvBallot;
 	int acceptValue;
 	public ConfirmMessage(MessageType type, int sender, int receiver){
-		super(type, sender, receiver);
+		super(type, receiver);
 	}
 	public String translate() {
 		StringBuilder message = new StringBuilder(super.translate());
@@ -133,7 +141,7 @@ class SyncReqMessage extends Message {
 	 * */
 	int logLength;
 	public SyncReqMessage(MessageType type, int sender, int receiver){
-		super(type, sender, receiver);
+		super(type, receiver);
 	}
 	public String translate() {
 		StringBuilder message = new StringBuilder(super.translate());
@@ -152,7 +160,7 @@ class SyncAckMessage extends Message {
 	 * */
 	List<LogEntry> recentLog;
 	public SyncAckMessage(MessageType type, int sender, int receiver){
-		super(type, sender, receiver);
+		super(type, receiver);
 	}
 	public String translate() {
 		StringBuilder message = new StringBuilder(super.translate());

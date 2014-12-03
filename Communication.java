@@ -6,9 +6,9 @@ import java.util.*;
 
 
 class Communication {
-	final static int PORT_BASE = 5000;
+	final static int PORT = 5000;
 	static private Communication messengerInstance;
-	Map<Integer, Socket> socketMap;
+	Map<Integer, String> addrMap;
 	/*OutputStream outputStream;
 	InputStream inputStream;
 	OutputStreamWriter outputStreamWriter;
@@ -16,14 +16,18 @@ class Communication {
 	BufferedReader bufferedReader;
 	BufferedWriter bufferedWriter;*/
 	private Communication() {
-		socketMap = new HashMap<Integer, Socket>();
+		addrMap = new HashMap<Integer, String>();
 	}
 	
 	public void setAddress(Map<Integer, String> ipMap) throws UnknownHostException, IOException {
 		if (ipMap == null) return;
 		for (Integer serNo : ipMap.keySet()) 
-			socketMap.put(serNo, new Socket(ipMap.get(serNo), PORT_BASE + serNo));
+			addrMap.put(serNo, ipMap.get(serNo));
 	}
+	
+	public Socket getSocket(int receiver) throws UnknownHostException, IOException {
+		return new Socket(addrMap.get(receiver), PORT);
+	} 
 	
 	public static Communication getMessenger() {
 		if (messengerInstance == null) 
@@ -31,10 +35,22 @@ class Communication {
 		return messengerInstance;
 	}
 	
-	public void sendMessage(Message message) {
-		int a;
+	public void sendMessage(Message message){
+		try {
+			Socket socket = getSocket(message.getReceiver());
+			OutputStream out = socket.getOutputStream();
+			OutputStreamWriter writer = new OutputStreamWriter(out, "UTF-8");
+			BufferedWriter bufferedWriter = new BufferedWriter(writer);
+			bufferedWriter.write(message.translate());
+			bufferedWriter.flush();
+		}
+		catch(IOException ex) {
+			System.out.println("Sending Message Error!");
+		}
 	}
-
+	
+	public void 
+	
 	public Message parseMessage(String message) {
 		//fdff
 	}
