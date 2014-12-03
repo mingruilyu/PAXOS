@@ -61,10 +61,13 @@ abstract class Message {
 					ballot);
 
 		case "CONFIRM":
-			int acceptBallotNumber = Integer.parseInt(bodyParts[0]);
-			int acceptServerNumber = Integer.parseInt(bodyParts[1]);
-			Ballot acceptBallot = new Ballot(acceptBallotNumber,
-					acceptServerNumber);
+			Ballot acceptBallot = null;
+			if (!bodyParts[0].equals("NULL") && !bodyParts[1].equals("NULL")) {
+				int acceptBallotNumber = Integer.parseInt(bodyParts[0]);
+				int acceptServerNumber = Integer.parseInt(bodyParts[1]);
+				acceptBallot = new Ballot(acceptBallotNumber,
+						acceptServerNumber);
+			}
 			int recvBallotNumber = Integer.parseInt(bodyParts[2]);
 			int recvServerNumber = Integer.parseInt(bodyParts[3]);
 			Ballot recvBallot = new Ballot(recvBallotNumber, recvServerNumber);
@@ -246,8 +249,14 @@ class ConfirmMessage extends Message {
 
 	public String translate() {
 		StringBuilder message = new StringBuilder(super.translate());
-		message.append(String.valueOf(acceptBallot.ballotNumber) + DELIMIT);
-		message.append(String.valueOf(acceptBallot.serverNumber) + DELIMIT);
+		if (acceptBallot != null) {
+			message.append(String.valueOf(acceptBallot.ballotNumber) + DELIMIT);
+			message.append(String.valueOf(acceptBallot.serverNumber) + DELIMIT);
+		} else {
+			message.append("NULL" + DELIMIT);
+			message.append("NULL" + DELIMIT);
+		}
+
 		message.append(String.valueOf(recvBallot.ballotNumber) + DELIMIT);
 		message.append(String.valueOf(recvBallot.serverNumber) + DELIMIT);
 		message.append(String.valueOf(acceptValue) + DELIMIT);
