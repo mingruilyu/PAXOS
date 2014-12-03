@@ -129,14 +129,6 @@ class AcceptMessage extends Message {
 	Ballot ballot;
 	int logPosition;
 
-	public Ballot getBallot() {
-		return ballot;
-	}
-
-	public int getLogPosition() {
-		return logPosition;
-	}
-
 	public AcceptMessage(MessageType type, int sender, int receiver,
 			Ballot ballot, int logPosition) {
 		super(type, receiver);
@@ -163,12 +155,7 @@ class DecideMessage extends Message {
 	/*
 	 * BODY Field Content LOG_POS log position
 	 */
-	
 	int logPosition;
-
-	public int getLogPosition() {
-		return logPosition;
-	}
 
 	public DecideMessage(MessageType type, int sender, int receiver) {
 		super(type, receiver);
@@ -188,21 +175,12 @@ class DecideMessage extends Message {
 		return message.toString();
 	}
 }
-class NegPrepareReplyMessage extends Message {
-	
-}
 
-class NegAccept
 class PrepareMessage extends Message {
 	/*
 	 * BODY Field Content BAL_NO ballot number BAL_SERNO ballot server number
 	 */
 	Ballot ballot;
-	
-
-	public Ballot getBallot() {
-		return ballot;
-	}
 
 	public PrepareMessage(MessageType type, int sender, int receiver) {
 		super(type, receiver);
@@ -233,18 +211,6 @@ class ConfirmMessage extends Message {
 	Ballot acceptBallot;
 	Ballot recvBallot;
 	int acceptValue;
-	
-	public Ballot getAcceptBallot() {
-		return acceptBallot;
-	}
-
-	public Ballot getRecvBallot() {
-		return recvBallot;
-	}
-
-	public int getAcceptValue() {
-		return acceptValue;
-	}
 
 	public ConfirmMessage(MessageType type, int sender, int receiver) {
 		super(type, receiver);
@@ -275,10 +241,6 @@ class SyncReqMessage extends Message {
 	 * BODY Field Content LOG_LEN log length
 	 */
 	int logLength;
-	
-	public int getLogLength() {
-		return logLength;
-	}
 
 	public SyncReqMessage(MessageType type, int sender, int receiver) {
 		super(type, receiver);
@@ -304,10 +266,6 @@ class SyncAckMessage extends Message {
 	 * ...
 	 */
 	List<LogEntry> recentLog;
-	
-	public List<LogEntry> getRecentLog() {
-		return recentLog;
-	}
 
 	public SyncAckMessage(MessageType type, int sender, int receiver) {
 		super(type, receiver);

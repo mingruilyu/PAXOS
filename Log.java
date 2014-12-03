@@ -8,6 +8,7 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.util.LinkedList;
+import java.util.List;
 
 public class Log {
 	LinkedList<LogEntry> logs = new LinkedList<LogEntry>();
@@ -81,7 +82,7 @@ public class Log {
 
 	}
 
-	boolean synchronizeLogLists(LinkedList<LogEntry> list) {
+	boolean synchronizeLogLists(List<LogEntry> list) {
 		if (list == null)
 			return false;
 		for (LogEntry e : list) {
@@ -90,5 +91,15 @@ public class Log {
 		return true;
 
 	}
-
+	
+	List<LogEntry> compareLog(int logLength) {
+		List<LogEntry> complement = new LinkedList<LogEntry>();
+		if (logLength > logs.size()) {
+			System.out.println("Unsynchronized log is longer than the current log!");
+			return null;
+		}
+		for (int i = logLength; i < logs.size(); i ++)
+			complement.add(logs.get(i));
+		return complement;
+	}
 }

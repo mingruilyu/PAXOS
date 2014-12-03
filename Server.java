@@ -54,26 +54,37 @@ public class Server {
 								   currentVal);
 				currentBallot = prepareMessage.getBallot();
 			}
-			else if (currentBallot.compareTo(acceptMessage.getBallot()) < 0) {
+			else {
 				reply = new ConfirmMessage(MessageType.CONFIRM, 
 						   serverNo, 
 						   acceptMessage.getSender(),
 						   prepareMessage.getBallot(), 
 						   currentBallot, 
 						   currentVal);
-				currentBallot = prepareMessage.getBallot();
+				if (currentBallot.compareTo(acceptMessage.getBallot()) < 0)
+					currentBallot = prepareMessage.getBallot();
 			}
-			else {
-				reply
-			}
-			messenger.sendMessage(reply);
 			break;
-		case SYNC_REQ: break;
-		case SYNC_ACK: break;
-		case CONFIRM: break;
+		case SYNC_REQ: 
+			SyncReqMessage syncReqMessage = (SyncReqMessage)message;
+			List<LogEntry> complement = log.compareLog(syncReqMessage.getLogLength());
+			reply = new SyncAckMessage(MessageType.SYNC_ACK,
+									serverNo, 
+									syncReqMessage.getSender(),
+									complement);
+			break;
+		case SYNC_ACK: 
+			SyncAckMessage syncAckMessage = (SyncAckMessage)message;
+			log.synchronizeLogLists(syncAckMessage.getRecentLog());
+			break;
+		case CONFIRM:
+			ConfirmMessage confirmMessage = (ConfirmMessage)message;
+			if ()
+			break;
 		case DECIDE: break;
 		}
-		}
+		if (reply != null)
+			messenger.sendMessage(reply);
 	}
 
 	public static void main(String[] args) {
