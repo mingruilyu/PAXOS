@@ -44,7 +44,7 @@ abstract class Message {
 		return header.toString();
 	}
 
-	public Message parseMessage(String messageString) {
+	public static Message parseMessage(String messageString) {
 		String[] headerParts = messageString.split(
 				String.valueOf(Message.DELIMIT), 4);
 		int sender = Integer.parseInt(headerParts[0]);
@@ -119,6 +119,14 @@ class Ballot implements Comparable<Ballot> {
 		else
 			return this.serverNumber - another.serverNumber;
 	}
+
+	public int getBallotNumber() {
+		return ballotNumber;
+	}
+
+	public int getServerNumber() {
+		return serverNumber;
+	}
 }
 
 class AcceptMessage extends Message {
@@ -136,10 +144,6 @@ class AcceptMessage extends Message {
 		this.logPosition = logPosition;
 	}
 
-	public AcceptMessage(MessageType type, int sender, int receiver) {
-		super(type, receiver);
-	}
-
 	public String translate() {
 		StringBuilder message = new StringBuilder();
 		message.append(super.translate());
@@ -149,6 +153,14 @@ class AcceptMessage extends Message {
 		message.append(String.valueOf(MSG_END));
 		return message.toString();
 	}
+
+	public Ballot getBallot() {
+		return ballot;
+	}
+
+	public int getLogPosition() {
+		return logPosition;
+	}
 }
 
 class DecideMessage extends Message {
@@ -157,8 +169,8 @@ class DecideMessage extends Message {
 	 */
 	int logPosition;
 
-	public DecideMessage(MessageType type, int sender, int receiver) {
-		super(type, receiver);
+	public int getLogPosition() {
+		return logPosition;
 	}
 
 	public DecideMessage(MessageType type, int sender, int receiver,
@@ -182,14 +194,14 @@ class PrepareMessage extends Message {
 	 */
 	Ballot ballot;
 
-	public PrepareMessage(MessageType type, int sender, int receiver) {
-		super(type, receiver);
-	}
-
 	public PrepareMessage(MessageType type, int sender, int receiver,
 			Ballot ballot) {
 		super(type, receiver);
 		this.ballot = ballot;
+	}
+
+	public Ballot getBallot() {
+		return ballot;
 	}
 
 	public String translate() {
@@ -212,16 +224,24 @@ class ConfirmMessage extends Message {
 	Ballot recvBallot;
 	int acceptValue;
 
-	public ConfirmMessage(MessageType type, int sender, int receiver) {
-		super(type, receiver);
-	}
-
 	public ConfirmMessage(MessageType type, int sender, int receiver,
 			Ballot acceptB, Ballot recvB, int acceptV) {
 		super(type, receiver);
 		this.acceptBallot = acceptB;
 		this.recvBallot = recvB;
 		this.acceptValue = acceptV;
+	}
+
+	public Ballot getAcceptBallot() {
+		return acceptBallot;
+	}
+
+	public Ballot getRecvBallot() {
+		return recvBallot;
+	}
+
+	public int getAcceptValue() {
+		return acceptValue;
 	}
 
 	public String translate() {
@@ -242,14 +262,14 @@ class SyncReqMessage extends Message {
 	 */
 	int logLength;
 
-	public SyncReqMessage(MessageType type, int sender, int receiver) {
-		super(type, receiver);
-	}
-
 	public SyncReqMessage(MessageType type, int sender, int receiver,
 			int logLength) {
 		super(type, receiver);
 		this.logLength = logLength;
+	}
+
+	public int getLogLength() {
+		return logLength;
 	}
 
 	public String translate() {
@@ -267,15 +287,15 @@ class SyncAckMessage extends Message {
 	 */
 	List<LogEntry> recentLog;
 
-	public SyncAckMessage(MessageType type, int sender, int receiver) {
-		super(type, receiver);
-	}
-
 	public SyncAckMessage(MessageType type, int sender, int receiver,
 			List<LogEntry> recentLog) {
 
 		super(type, receiver);
 		this.recentLog = recentLog;
+	}
+
+	public List<LogEntry> getRecentLog() {
+		return recentLog;
 	}
 
 	public String translate() {
