@@ -51,7 +51,50 @@ class Communication {
 	
 	public void 
 	
-	public Message parseMessage(String message) {
-		//fdff
+	public Message parseMessage(String messageString) {
+		String[] headerParts = messageString.split(
+				String.valueOf(Message.DELIMIT), 4);
+		int sender = Integer.parseInt(headerParts[0]);
+		int receiver = Integer.parseInt(headerParts[1]);		
+		String[] bodyParts = headerParts[3].split(
+				String.valueOf(Message.DELIMIT));
+		
+		switch (headerParts[2]) {
+		case "PREPARE":
+			int ballotNumber = Integer.parseInt(bodyParts[0]);
+			int serverNumber = Integer.parseInt(bodyParts[1]);
+			Ballot ballot = new Ballot(ballotNumber, serverNumber);
+			return new PrepareMessage(MessageType.PREPARE,sender,receiver,ballot);
+			
+		case "CONFIRM":
+			int acceptBallotNumber = Integer.parseInt(bodyParts[0]);
+			int acceptServerNumber = Integer.parseInt(bodyParts[1]);
+			Ballot acceptBallot = new Ballot(acceptBallotNumber, acceptServerNumber);
+			int recvBallotNumber = Integer.parseInt(bodyParts[2]);
+			int recvServerNumber = Integer.parseInt(bodyParts[3]);
+			Ballot recvBallot = new Ballot(recvBallotNumber, recvServerNumber);
+			int acceptValue=Integer.parseInt(bodyParts[4]);
+			return new ConfirmMessage(MessageType.CONFIRM,sender,receiver,acceptBallot,recvBallot,acceptValue);
+		
+		case "ACCEPT":			
+			Ballot acceptedBallot = new Ballot(Integer.parseInt(bodyParts[0]),Integer.parseInt(bodyParts[1]));
+			int logPosition= Integer.parseInt(bodyParts[2]);			
+			return new AcceptMessage(MessageType.ACCEPT,sender,receiver,acceptedBallot,logPosition);
+			
+		case "DECIDE":
+			int decidedLogPosition= Integer.parseInt(bodyParts[0]);			
+			return new DecideMessage(MessageType.DECIDE,sender,receiver,decidedLogPosition);			
+			break;
+		case "SYNC_REQ":			
+			int logLength= Integer.parseInt(bodyParts[0]);			
+			return new DecideMessage(MessageType.SYNC_REQ,sender,receiver,logLength);
+		case "SYNC_ACK":
+			List<LogEntry> recentLog;				
+			for (int i = 0; i<bodyParts.length; i=i+2) {
+				LogEntry log = new LogEntry(Operation.getEnumFromString(bodyParts[i]),Double.parseDouble(bodyParts[i+1]));
+				recentLog.add(log);				
+			}
+			return new SyncAckMessage(MessageType.SYNC_ACK,sender,receiver,recentLog);
+		}
 	}
 }
