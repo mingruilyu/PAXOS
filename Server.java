@@ -28,6 +28,7 @@ public class Server {
 		Message message;
 		String command;
 		Message reply;
+		Message broadcast;
 		synchronized(this) {
 			if(!messageList.isEmpty()) 
 				message = messageList.remove(0);
@@ -79,9 +80,38 @@ public class Server {
 			break;
 		case CONFIRM:
 			ConfirmMessage confirmMessage = (ConfirmMessage)message;
-			if ()
+			if (confirmMessage.getAcceptValue() == NULL_VALUE) {
+				if (confirmMessage.getAcceptBallot().compareTo(currentBallot) > 0) {
+					updateBallot(confirmMessage.getAcceptBallot);
+					reply = new PrepareMessage(MessageType.PREPARE,
+								serverNo,
+								message.getSender(),
+								currentBallot);
+				}
+				else {
+					reply = new AcceptMessage(MessageType.ACCEPT,
+							serverNo,
+							message.getSender(),
+							currentBallot,
+							currentVal);
+				}
+			}
+			else {
+				if (confirmMessage.getAcceptBallot().compareTo(currentBallot) < 0) {
+					Ballot ballot;
+					int logPosition;
+					reply = new AcceptMessage(MessageType.ACCEPT, 
+							serverNo,
+							Messenger.BROADCAST,
+							currentBallot, 
+							confirmMessage.getLogPosition());
+				}
+			}
 			break;
-		case DECIDE: break;
+		case DECIDE: 
+			DecideMessage decideMessage = (DecideMessage)message;
+			reply = decideMessage;
+			break;
 		}
 		if (reply != null)
 			messenger.sendMessage(reply);

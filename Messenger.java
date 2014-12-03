@@ -7,7 +7,7 @@ import java.util.*;
 
 public class Messenger {
 	final static int PORT = 5000;
-	
+	final static int BROADCAST = -1;
 	static private Messenger messengerInstance;
 	Map<Integer, String> addrMap;
 
