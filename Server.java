@@ -5,6 +5,8 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Timer;
+import java.util.concurrent.Semaphore;
 
 public class Server {
 	Log log;
@@ -13,7 +15,17 @@ public class Server {
 	int currentVal;
 	LogEntry currentOperation;
 	boolean syncFlag;
+	int lock = 0;
+	final static int MAJORITY = 3;
+	final static int TOTAL_SERVER = 5;
+	final static long TIMEOUT = 100000;
+	boolean mode;
 	Messenger messenger;
+	long confirmTimerStart;
+	long prepareTimerStart;
+	List<Message> confirmList = new LinkedList<Message>();
+	
+	
 	List<Message> messageList = new LinkedList<Message>();
 	List<String> commandList = new LinkedList<String>();
 	Terminal commandInterpreter;
@@ -26,6 +38,15 @@ public class Server {
 		dispatcher.run();
 		Thread commandInterpreter = new Terminal(commandList);
 		commandInterpreter.run();
+	}
+	private void resetConfirmTimer() {
+		confirmTimerStart = System.currentTimeMillis();
+	}
+	private long getConfirmTimerPass() {
+		return System.currentTimeMillis() - confirmTimerStart;
+	}
+	private long getLockTimerPass() {
+		return System.currentTimeMillis() - lockTimerStart;
 	}
 	
 	public void run() {
@@ -47,8 +68,32 @@ public class Server {
 		switch(message.getType()) {
 		case ACCEPT:
 			AcceptMessage acceptMessage = (AcceptMessage)message;
+			if (receiveList.size() > MAJORITY) {
+				reply = new DecideMessage(MessageType);
+				broadcast(reply);
+			}
+			else {
+				receiveList.add(acceptMessage);
+			}
+			if (!mode) { // relaxed PAXOS
+				reply = new AcceptMessage(MessageType.ACCEPT,
+										serverNo,
+										acceptMessage.getBallot(),
+										acceptMessage.getValue());
+				broadcast(reply);
+			}
+			else if (acceptMessage.getBallot().compareTo(currentBallot) > 0) {
+				// ISPAXOS
+					currentVal = acceptMessage.getValue();
+					currentBallot = acceptMessage.getBallot();
 
-			currentVal = acceptMessage.getLogPosition();
+					reply = new AcceptMessage(MessageType.ACCEPT,
+							serverNo,
+							currentBallot,
+					        currentVal);
+					
+			}
+			
 			break;
 		case PREPARE: 
 			PrepareMessage prepareMessage = (PrepareMessage)message;
@@ -62,14 +107,14 @@ public class Server {
 				currentBallot = prepareMessage.getBallot();
 			}
 			else {
-				reply = new ConfirmMessage(MessageType.CONFIRM, 
-						   serverNo, 
-						   message.getSender(),
-						   prepareMessage.getBallot(), 
-						   currentBallot, 
-						   currentVal);
-				if (currentBallot.compareTo(prepareMessage.getBallot()) < 0)
-					currentBallot = prepareMessage.getBallot();
+				if (currentBallot.compareTo(prepareMessage.getBallot()) < 0) {
+					reply = new ConfirmMessage(MessageType.CONFIRM, 
+							   serverNo, 
+							   message.getSender(),
+							   prepareMessage.getBallot(), 
+							   currentBallot, 
+							   currentVal);
+				}
 			}
 			break;
 		case SYNC_REQ: 
@@ -86,6 +131,12 @@ public class Server {
 			break;
 		case CONFIRM:
 			ConfirmMessage confirmMessage = (ConfirmMessage)message;
+			synchronized(this) {
+				confirmList.add(confirmMessage);
+				if (confirmList.size() != TOTAL_SERVER && getConfirmTimerPass() < TIMEOUT)
+					break;
+			}
+			
 			if (confirmMessage.getAcceptValue() == Message.NULL_VALUE) {
 				if (confirmMessage.getAcceptBallot().compareTo(currentBallot) > 0) {
 					updateBallot(confirmMessage.getAcceptBallot());
@@ -93,13 +144,6 @@ public class Server {
 								serverNo,
 								message.getSender(),
 								currentBallot);
-				}
-				else {
-					reply = new AcceptMessage(MessageType.ACCEPT,
-							serverNo,
-							message.getSender(),
-							currentBallot,
-							currentVal);
 				}
 			}
 			else {
@@ -119,6 +163,13 @@ public class Server {
 		}
 		if (reply != null)
 			messenger.sendMessage(reply);
+	}
+	
+	public void startPreposal() {
+		timerStart = System.currentTimeMillis();
+		Message newProposal = new PrepareMessage();
+		messenger.sendMessage(newProposal);
+		lock ++;
 	}
 	
 	public static void main(String[] args) {
@@ -156,7 +207,6 @@ public class Server {
 				System.out.println("IO error trying to read your command!");
 				System.exit(1);
 			}
-
 		}
 		return null;
 	}
