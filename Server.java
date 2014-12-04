@@ -174,7 +174,7 @@ public class Server {
 	
 	public static void main(String[] args) {
 		Server server;
-		String serverNumberString;
+		String serverNumberString = null;
 		if(args.length==1){
 			serverNumberString = args[0];
 		}		
@@ -208,7 +208,7 @@ public class Server {
 				System.exit(1);
 			}
 		}
-		return null;
+		
 	}
 
 	private void updateBallot(Ballot ballot) {

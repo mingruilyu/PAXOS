@@ -36,9 +36,9 @@ public class Log {
 			String line = br.readLine();
 			while (line != null) {
 				String[] array = line.split("\\s+");
-				Operation operation = Operation.getEnumFromString(array[0]);
+				//Operation operation = Operation.getEnumFromString(array[0]);
 				double operand = Double.parseDouble(array[1]);
-				appendLogEntry(new LogEntry(operation, operand));
+				appendLogEntry(new LogEntry(array[0], operand));
 				line = br.readLine();
 			}
 
@@ -63,11 +63,11 @@ public class Log {
 	boolean verifyLogs(double currentBalance) {
 		double sum = 0;
 		for (LogEntry e : logs) {
-			switch (e.operation) {
-			case WITHDRAW:
+			switch (e.operation.toLowerCase()) {
+			case "withdraw":
 				sum = sum - e.operand;
 				break;
-			case DEPOSIT:
+			case "deposit":
 				sum = sum + e.operand;
 				break;
 
