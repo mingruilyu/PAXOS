@@ -12,7 +12,6 @@ public class Server {
 	Log log;
 	int serverNo;
 	Ballot currentBallot;
-	int currentVal;
 	LogEntry currentOperation;
 	boolean syncFlag;
 	int lock = 0;
@@ -23,7 +22,7 @@ public class Server {
 	Messenger messenger;
 	long confirmTimerStart;
 	long prepareTimerStart;
-	List<Message> confirmList = new LinkedList<Message>();
+	List<ConfirmMessage> confirmList = new LinkedList<ConfirmMessage>();
 	
 	
 	List<Message> messageList = new LinkedList<Message>();
@@ -136,25 +135,34 @@ public class Server {
 				if (confirmList.size() != TOTAL_SERVER && getConfirmTimerPass() < TIMEOUT)
 					break;
 			}
-			
-			if (confirmMessage.getAcceptValue() == Message.NULL_VALUE) {
-				if (confirmMessage.getAcceptBallot().compareTo(currentBallot) > 0) {
-					updateBallot(confirmMessage.getAcceptBallot());
-					reply = new PrepareMessage(MessageType.PREPARE,
-								serverNo,
-								message.getSender(),
-								currentBallot);
+			// check how many confirm Message that has ballot that is the same of the currentBallot 
+			int	confirmRecvCount = 0;
+			Ballot recvMaxBallot = null;
+			LogEntry MaxBallotValue = null;
+				for (int i = 0; i < confirmList.size(); i++) {
+					Ballot temp = confirmList.get(i).getAcceptBallot();
+					if (temp == null) {
+						confirmRecvCount ++;
+						continue;
+					}
+					else if (temp.compareTo(confirmList.get(i).getRecvBallot()) < 0){
+						// get a fake reply, do nothing
+						confirmRecvCount ++;
+						if (recvMaxBallot == null || recvMaxBallot.compareTo(temp) < 0) {
+							MaxBallotValue = confirmList.get(i).getAcceptValue();
+							recvMaxBallot = temp;
+						}
+					
+					}
 				}
-			}
-			else {
-				if (confirmMessage.getAcceptBallot().compareTo(currentBallot) < 0) {
-					reply = new AcceptMessage(MessageType.ACCEPT, 
-							serverNo,
-							Messenger.BROADCAST,
-							currentBallot, 
-							confirmMessage.getAcceptValue());
+				
+				if (confirmRecvCount > MAJORITY - 1) {
+					if (MaxBallotValue == null){}
+						//broadcast accept with currentOperation
+					else {
+						//broadcast accept with recvMaxBallot
+					}
 				}
-			}
 			break;
 		case DECIDE: 
 			DecideMessage decideMessage = (DecideMessage)message;
@@ -165,11 +173,12 @@ public class Server {
 			messenger.sendMessage(reply);
 	}
 	
+	
+	
 	public void startPreposal() {
-		timerStart = System.currentTimeMillis();
+		prepareTimerStart = System.currentTimeMillis();
 		Message newProposal = new PrepareMessage();
 		messenger.sendMessage(newProposal);
-		lock ++;
 	}
 	
 	public static void main(String[] args) {
@@ -205,7 +214,6 @@ public class Server {
 				return command;
 			} catch (IOException ioe) {
 				System.out.println("IO error trying to read your command!");
-				System.exit(1);
 			}
 		}
 		
