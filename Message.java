@@ -177,7 +177,7 @@ class AcceptMessage extends Message {
 		return ballot;
 	}
 
-	public LogEntry getLogPosition() {
+	public LogEntry getAcceptLog() {
 		return acceptLog;
 	}
 }
@@ -188,7 +188,7 @@ class DecideMessage extends Message {
 	 */
 	LogEntry value;
 
-	public LogEntry getLogPosition() {
+	public LogEntry getValue() {
 		return value;
 	}
 
@@ -244,6 +244,10 @@ class ConfirmMessage extends Message {
 	Ballot recvBallot;
 	LogEntry value;
 
+	public LogEntry getValue() {
+		return value;
+	}
+
 	public ConfirmMessage(MessageType type, int sender, int receiver,
 			Ballot acceptB, Ballot recvB, LogEntry acceptValue) {
 		super(type, receiver);
@@ -260,9 +264,7 @@ class ConfirmMessage extends Message {
 		return recvBallot;
 	}
 
-	public LogEntry getAcceptValue() {
-		return value;
-	}
+	
 
 	public String translate() {
 		StringBuilder message = new StringBuilder(super.translate());

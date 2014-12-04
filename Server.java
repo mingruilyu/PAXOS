@@ -3,8 +3,10 @@ package server;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Set;
 import java.util.Timer;
 import java.util.concurrent.Semaphore;
 
@@ -24,12 +26,16 @@ public class Server {
 	long confirmTimerStart;
 	long prepareTimerStart;
 	List<Message> confirmList = new LinkedList<Message>();
-	
-	
+
 	List<Message> messageList = new LinkedList<Message>();
 	List<String> commandList = new LinkedList<String>();
 	Terminal commandInterpreter;
-	public Server(int serverNo){
+
+	Set<Integer> acceptMSources = new HashSet<Integer>();
+	Ballot acceptedBallot = null;
+	LogEntry acceptedValue = null;
+
+	public Server(int serverNo) {
 		this.serverNo = serverNo;
 		currentBallot = null;
 		currentVal = log.getLogPosition();
@@ -39,16 +45,19 @@ public class Server {
 		Thread commandInterpreter = new Terminal(commandList);
 		commandInterpreter.run();
 	}
+
 	private void resetConfirmTimer() {
 		confirmTimerStart = System.currentTimeMillis();
 	}
+
 	private long getConfirmTimerPass() {
 		return System.currentTimeMillis() - confirmTimerStart;
 	}
+
 	private long getLockTimerPass() {
 		return System.currentTimeMillis() - lockTimerStart;
 	}
-	
+
 	public void run() {
 		Message message = null;
 		String command = null;
@@ -68,6 +77,24 @@ public class Server {
 		switch(message.getType()) {
 		case ACCEPT:
 			AcceptMessage acceptMessage = (AcceptMessage)message;
+			int messageBallotNum = acceptMessage.ballot.ballotNumber;
+			LogEntry messageValue =  acceptMessage.getAcceptLog();
+			if(acceptedValue == null || acceptedBallot ==null || messageBallotNum>acceptedBallot.ballotNumber){
+				acceptedValue = messageValue;
+				acceptedBallot = acceptMessage.ballot;
+				acceptMSources.clear();
+				acceptMSources.add(acceptMessage.getSender());
+				// broadcast;  change sender				
+				reply = new DecideMessage(MessageType);
+				broadcast(reply);
+			}
+			else if(messageBallotNum==acceptedBallot.ballotNumber && acceptedValue.compareTo(messageValue)==0){
+				acceptMSources.add(acceptMessage.getSender());
+				if(acceptMSources.size()>=MAJORITY-1)
+					//send decide;
+					
+			}
+			
 			if (receiveList.size() > MAJORITY) {
 				reply = new DecideMessage(MessageType);
 				broadcast(reply);
@@ -164,22 +191,22 @@ public class Server {
 		if (reply != null)
 			messenger.sendMessage(reply);
 	}
-	
+
 	public void startPreposal() {
 		timerStart = System.currentTimeMillis();
 		Message newProposal = new PrepareMessage();
 		messenger.sendMessage(newProposal);
-		lock ++;
+		lock++;
 	}
-	
+
 	public static void main(String[] args) {
 		Server server;
 		String serverNumberString = null;
-		if(args.length==1){
+		if (args.length == 1) {
 			serverNumberString = args[0];
-		}		
-		while(true){			
-			if(serverNumberString!=null){
+		}
+		while (true) {
+			if (serverNumberString != null) {
 				try {
 					int value = Integer.parseInt(serverNumberString);
 					server = new Server(value);
@@ -187,19 +214,20 @@ public class Server {
 				} catch (NumberFormatException ex) {
 					serverNumberString = getCorrestInput();
 				}
-			}
-			else serverNumberString = getCorrestInput();;
+			} else
+				serverNumberString = getCorrestInput();
+			;
 		}
-		while(true) {
+		while (true) {
 			server.run();
 		}
 	}
-	
+
 	private static String getCorrestInput() {
 		System.out.println("Please enter the server number:");
 		BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
 		while (true) {
-			String command = null;		
+			String command = null;
 			try {
 				command = br.readLine();
 				return command;
@@ -208,13 +236,13 @@ public class Server {
 				System.exit(1);
 			}
 		}
-		
+
 	}
 
 	private void updateBallot(Ballot ballot) {
 		currentBallot.ballotNumber = ballot.getBallotNumber() + 1;
 	}
-	
+
 	public void interpret(String s) {
 		if (s == null || s.length() == 0)
 			return;
@@ -230,9 +258,8 @@ public class Server {
 				try {
 					double value = Double.parseDouble(valueString);
 					LogEntry currentOperation = value;
-					Message newProposal = new PrepareMessage(MessageType.PREPARE,
-							serverNo,
-							Messenger.BROADCAST,
+					Message newProposal = new PrepareMessage(
+							MessageType.PREPARE, serverNo, Messenger.BROADCAST,
 							currentBallot);
 					messenger.sendMessage(newProposal);
 					System.out.println("deposit  " + value);
@@ -291,9 +318,8 @@ public class Server {
 	}
 
 	public void handleInvalidInput() {
-		//  ?? handle invalid input
+		// ?? handle invalid input
 		System.out.println("invalid input");
 	}
 
 }
-
