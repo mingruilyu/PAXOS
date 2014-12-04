@@ -24,14 +24,7 @@ public class Server {
 	Messenger messenger;
 	long confirmTimerStart;
 	long prepareTimerStart;
-<<<<<<< HEAD
 	List<ConfirmMessage> confirmList = new LinkedList<ConfirmMessage>();
-	
-	
-=======
-	List<Message> confirmList = new LinkedList<Message>();
-
->>>>>>> 6338527cfc15a616fef65ceb50183f097da21ef8
 	List<Message> messageList = new LinkedList<Message>();
 	List<String> commandList = new LinkedList<String>();
 	Terminal commandInterpreter;
