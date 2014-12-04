@@ -79,48 +79,21 @@ public class Server {
 			AcceptMessage acceptMessage = (AcceptMessage)message;
 			int messageBallotNum = acceptMessage.ballot.ballotNumber;
 			LogEntry messageValue =  acceptMessage.getAcceptLog();
-			if(acceptedValue == null || acceptedBallot ==null || messageBallotNum>acceptedBallot.ballotNumber){
+			if(acceptedBallot == null || acceptedValue == null || messageBallotNum>acceptedBallot.ballotNumber){
 				acceptedValue = messageValue;
 				acceptedBallot = acceptMessage.ballot;
 				acceptMSources.clear();
 				acceptMSources.add(acceptMessage.getSender());
-				// broadcast;  change sender				
-				reply = new DecideMessage(MessageType);
-				broadcast(reply);
+				// broadcast accept     update sender				
+				
 			}
-			else if(messageBallotNum==acceptedBallot.ballotNumber && acceptedValue.compareTo(messageValue)==0){
+			else if(messageBallotNum==acceptedBallot.ballotNumber){
 				acceptMSources.add(acceptMessage.getSender());
-				if(acceptMSources.size()>=MAJORITY-1)
-					//send decide;
-					
-			}
-			
-			if (receiveList.size() > MAJORITY) {
-				reply = new DecideMessage(MessageType);
-				broadcast(reply);
-			}
-			else {
-				receiveList.add(acceptMessage);
-			}
-			if (!mode) { // relaxed PAXOS
-				reply = new AcceptMessage(MessageType.ACCEPT,
-										serverNo,
-										acceptMessage.getBallot(),
-										acceptMessage.getValue());
-				broadcast(reply);
-			}
-			else if (acceptMessage.getBallot().compareTo(currentBallot) > 0) {
-				// ISPAXOS
-					currentVal = acceptMessage.getValue();
-					currentBallot = acceptMessage.getBallot();
-
-					reply = new AcceptMessage(MessageType.ACCEPT,
-							serverNo,
-							currentBallot,
-					        currentVal);
-					
-			}
-			
+				if(acceptMSources.size()>=MAJORITY-1){
+					//broadcast decide;	
+				}
+									
+			}			
 			break;
 		case PREPARE: 
 			PrepareMessage prepareMessage = (PrepareMessage)message;
