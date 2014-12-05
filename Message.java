@@ -85,7 +85,7 @@ abstract class Message {
 			int recvServerNumber = Integer.parseInt(bodyParts[3]);
 			Ballot recvBallot = new Ballot(recvBallotNumber, recvServerNumber);
 			LogEntry log = new LogEntry(bodyParts[4],
-					Double.parseDouble(bodyParts[5]));
+					Double.parseDouble(bodyParts[5]), Integer.parseInt(bodyParts[6]));
 			return new ConfirmMessage(MessageType.CONFIRM, sender, receiver,
 					acceptBallot, recvBallot, log);
 
@@ -93,17 +93,15 @@ abstract class Message {
 			Ballot acceptedBallot = new Ballot(Integer.parseInt(bodyParts[0]),
 					Integer.parseInt(bodyParts[1]));
 			LogEntry acceptLog = new LogEntry(bodyParts[2],
-					Double.parseDouble(bodyParts[3]));
+					Double.parseDouble(bodyParts[3]), Integer.parseInt(bodyParts[4]));
 			return new AcceptMessage(MessageType.ACCEPT, sender, receiver,
 					acceptedBallot, acceptLog);
 
 		case "DECIDE":			
 			LogEntry decideLog = new LogEntry(bodyParts[0],
-					Double.parseDouble(bodyParts[1]));
-			Ballot decidedBallot = new Ballot(Integer.parseInt(bodyParts[2]),
-					Integer.parseInt(bodyParts[3]));
+					Double.parseDouble(bodyParts[1]), Integer.parseInt(bodyParts[2]));
 			return new DecideMessage(MessageType.DECIDE, sender, receiver,
-					decideLog, decidedBallot);
+					decideLog);
 		case "SYNC_REQ":
 			int logLength = Integer.parseInt(bodyParts[0]);
 			return new SyncReqMessage(MessageType.SYNC_REQ, sender, receiver,
@@ -112,7 +110,7 @@ abstract class Message {
 			List<LogEntry> logs = new LinkedList<LogEntry>();
 			for (int i = 0; i < bodyParts.length; i = i + 2) {
 				LogEntry logEntry = new LogEntry(bodyParts[i],
-						Double.parseDouble(bodyParts[i + 1]));
+						Double.parseDouble(bodyParts[i + 1]), Integer.parseInt(bodyParts[i + 2]));
 				logs.add(logEntry);
 			}
 			return new SyncAckMessage(MessageType.SYNC_ACK, sender, receiver,
@@ -184,6 +182,7 @@ class AcceptMessage extends Message {
 		message.append(String.valueOf(ballot.serverNumber) + DELIMIT);
 		message.append(String.valueOf(acceptLog.operation) + DELIMIT);
 		message.append(String.valueOf(acceptLog.operand) + DELIMIT);
+		message.append(String.valueOf(acceptLog.logPosition) + DELIMIT);
 		message.append(String.valueOf(MSG_END));
 		return message.toString();
 	}
@@ -204,18 +203,13 @@ class DecideMessage extends Message {
 	 * LOG_BAL log ballot
 	 */
 	LogEntry value;
-	Ballot ballot;
 	public LogEntry getValue() {
 		return value;
 	}
-	public Ballot getBallot() {
-		return ballot;
-	}
 	public DecideMessage(MessageType type, int sender, int receiver,
-			LogEntry value, Ballot ballot) {
+			LogEntry value) {
 		super(type, receiver);
 		this.value = value;
-		this.ballot = ballot;
 	}
 
 	public String translate() {
@@ -223,8 +217,7 @@ class DecideMessage extends Message {
 		message.append(super.translate());
 		message.append(String.valueOf(value.operation) + DELIMIT);
 		message.append(String.valueOf(value.operand) + DELIMIT);
-		message.append(String.valueOf(ballot.ballotNumber) + DELIMIT);
-		message.append(String.valueOf(ballot.serverNumber) + DELIMIT);
+		message.append(String.valueOf(value.logPosition) + DELIMIT);
 		message.append(String.valueOf(MSG_END));
 		return message.toString();
 	}
@@ -301,6 +294,7 @@ class ConfirmMessage extends Message {
 		message.append(String.valueOf(recvBallot.serverNumber) + DELIMIT);
 		message.append(String.valueOf(value.operation) + DELIMIT);
 		message.append(String.valueOf(value.operand) + DELIMIT);
+		message.append(String.valueOf(value.logPosition) + DELIMIT);
 		message.append(String.valueOf(MSG_END));
 		return message.toString();
 	}
@@ -353,6 +347,7 @@ class SyncAckMessage extends Message {
 		for (int i = 0; i < recentLog.size(); i++) {
 			message.append(String.valueOf(recentLog.get(i).operation) + DELIMIT);
 			message.append(String.valueOf(recentLog.get(i).operand) + DELIMIT);
+			message.append(String.valueOf(recentLog.get(i).logPosition) + DELIMIT);
 		}
 		message.append(String.valueOf(MSG_END));
 		return message.toString();

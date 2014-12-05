@@ -13,10 +13,10 @@ public class Dispatcher extends Thread{
 	ExecutorService threadPool = Executors.newFixedThreadPool(THREAD_POOL_SIZE);
 	List<Message> messageList;
 	ServerSocket serverSocket;
-	public Dispatcher(List<Message> messageList) {
+	public Dispatcher(List<Message> messageList, int port) {
 		this.messageList = messageList;
 		try {
-			serverSocket = new ServerSocket(Messenger.PORT);
+			serverSocket = new ServerSocket(port);
 		}
 		catch (IOException ex) {
 			System.out.println("could not start server!");

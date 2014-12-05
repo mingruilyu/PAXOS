@@ -54,7 +54,7 @@ public class Server {
 		// start messenger
 		messenger = Messenger.getMessenger();
 		// start dispatcher
-		dispatcher = new Dispatcher(recvMessageList);
+		dispatcher = new Dispatcher(recvMessageList, messenger.getPort(serverNo));
 		dispatcher.run();
 		// start terminal
 		terminal = new Terminal();
@@ -83,6 +83,7 @@ public class Server {
 		case ACCEPT:
 			if (userTimer.getTime() > TRANSACTION_TIMEOUT) {
 				notifyTerminal(false);
+				acceptCount = 0;
 				break;
 			}
 			AcceptMessage acceptMessage = (AcceptMessage)message;
@@ -98,8 +99,7 @@ public class Server {
 					Message decideMessage = new DecideMessage(MessageType.DECIDE,
 														this.serverNo, 
 														Messenger.BROADCAST,
-														currentOperation,
-														currentBallot);
+														currentOperation);
 					// we dont periodically send decide message
 					acceptCount = 0;
 					messenger.sendMessage(decideMessage);
@@ -163,7 +163,7 @@ public class Server {
 			ConfirmMessage confirmMessage = (ConfirmMessage)message;
 			synchronized(this) {
 				confirmList.add(confirmMessage);
-				if (confirmList.size() != TOTAL_SERVER && timer.getTime() < TIMEOUT)
+				if (confirmList.size() != TOTAL_SERVER && timer.getTime() < WAIT_TIMEOUT)
 					break;
 			}
 			// check how many confirm Message that has ballot that is the same as the currentBallot 
@@ -291,6 +291,7 @@ public class Server {
 		System.out.println(operation);
 		timer.resetTimer();
 		confirmList.clear();
+		decidedOperation = operation;
 	}
 
 	public void interpret(String s) {
@@ -309,7 +310,7 @@ public class Server {
 				try {
 					double value = Double.parseDouble(valueString);
 					// start proposal with currentBallot and currentOperation
-					currentOperation = new LogEntry("deposit", value);
+					currentOperation = new LogEntry("deposit", value, log.getLogPosition());
 					if (!syncFlag) 
 						System.out.println("Unsynchronized!");
 					else {
@@ -332,7 +333,7 @@ public class Server {
 				try {
 					double value = Double.parseDouble(valueString);
 					// start proposal with currentBallot and currentOperation
-					currentOperation = new LogEntry("deposit", value);
+					currentOperation = new LogEntry("deposit", value, log.getLogPosition());
 					if (!syncFlag) 
 						System.out.println("Unsynchronized!");
 					else {
