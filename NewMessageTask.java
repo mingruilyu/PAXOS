@@ -16,8 +16,9 @@ public class NewMessageTask implements Callable<Void>{
 	public Void call() throws IOException {
 		InputStreamReader reader = new InputStreamReader(connection.getInputStream());
 		StringBuilder message = new StringBuilder();
-		for (int ch = reader.read(); ch != -1; ch = reader.read())
+		for (int ch = reader.read(); ch != '$'; ch = reader.read()) {
 			message.append((char)ch);
+		}
 		Message newMessage = Message.parseMessage(message.toString());
 		synchronized(this) {
 			messageList.add(newMessage);
