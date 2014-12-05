@@ -75,6 +75,22 @@ public class Log {
 		}
 		return sum == currentBalance;
 	}
+	
+	double getBalance() {
+		double sum = 0;
+		for (LogEntry e : logs) {
+			switch (e.operation.toLowerCase()) {
+			case "withdraw":
+				sum = sum - e.operand;
+				break;
+			case "deposit":
+				sum = sum + e.operand;
+				break;
+
+			}
+		}
+		return sum;
+	}
 
 	boolean appendLogEntry(LogEntry e) {
 		if (e == null)
