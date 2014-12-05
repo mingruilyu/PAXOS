@@ -76,19 +76,24 @@ abstract class Message {
 
 		case "CONFIRM":
 			Ballot acceptBallot = null;
-			if (!bodyParts[0].equals("NULL") && !bodyParts[1].equals("NULL")) {
-				int acceptBallotNumber = Integer.parseInt(bodyParts[0]);
-				int acceptServerNumber = Integer.parseInt(bodyParts[1]);
-				acceptBallot = new Ballot(acceptBallotNumber,
-						acceptServerNumber);
-			}
-			int recvBallotNumber = Integer.parseInt(bodyParts[2]);
-			int recvServerNumber = Integer.parseInt(bodyParts[3]);
+			LogEntry log = null;
+
+			int recvBallotNumber = Integer.parseInt(bodyParts[0]);
+			int recvServerNumber = Integer.parseInt(bodyParts[1]);
 			Ballot recvBallot = new Ballot(recvBallotNumber, recvServerNumber);
-			LogEntry log = new LogEntry(bodyParts[4],
-					Double.parseDouble(bodyParts[5]), Integer.parseInt(bodyParts[6]));
+
+			if (!bodyParts[2].equals("NULL") && !bodyParts[3].equals("NULL")) {
+				int acceptBallotNumber = Integer.parseInt(bodyParts[2]);
+				int acceptServerNumber = Integer.parseInt(bodyParts[3]);
+				acceptBallot = new Ballot(acceptBallotNumber,
+										acceptServerNumber);
+			}
+			if (!bodyParts[4].equals("NULL") && !bodyParts[5].equals("NULL") && !bodyParts[6].equals("NULL"))
+				log = new LogEntry(bodyParts[4],
+						Double.parseDouble(bodyParts[5]), 
+						Integer.parseInt(bodyParts[6]));
 			return new ConfirmMessage(MessageType.CONFIRM, sender, receiver,
-					acceptBallot, recvBallot, log);
+					 recvBallot, acceptBallot, log);
 
 		case "ACCEPT":
 			Ballot acceptedBallot = new Ballot(Integer.parseInt(bodyParts[0]),
@@ -146,6 +151,7 @@ class Ballot implements Comparable<Ballot> {
 
 	@Override
 	public int compareTo(Ballot another) {
+		if (another == null) return 1;
 		if (this.ballotNumber != another.ballotNumber)
 			return this.ballotNumber - another.ballotNumber;
 		else
@@ -264,7 +270,7 @@ class ConfirmMessage extends Message {
 	}
 
 	public ConfirmMessage(MessageType type, int sender, int receiver,
-			Ballot acceptB, Ballot recvB, LogEntry acceptValue) {
+			Ballot recvB, Ballot acceptB, LogEntry acceptValue) {
 		super(type, receiver, sender);
 		this.acceptBallot = acceptB;
 		this.recvBallot = recvB;
@@ -283,6 +289,10 @@ class ConfirmMessage extends Message {
 
 	public String translate() {
 		StringBuilder message = new StringBuilder(super.translate());
+
+
+		message.append(String.valueOf(recvBallot.ballotNumber) + DELIMIT);
+		message.append(String.valueOf(recvBallot.serverNumber) + DELIMIT);
 		if (acceptBallot != null) {
 			message.append(String.valueOf(acceptBallot.ballotNumber) + DELIMIT);
 			message.append(String.valueOf(acceptBallot.serverNumber) + DELIMIT);
@@ -290,12 +300,16 @@ class ConfirmMessage extends Message {
 			message.append("NULL" + DELIMIT);
 			message.append("NULL" + DELIMIT);
 		}
-
-		message.append(String.valueOf(recvBallot.ballotNumber) + DELIMIT);
-		message.append(String.valueOf(recvBallot.serverNumber) + DELIMIT);
-		message.append(String.valueOf(value.operation) + DELIMIT);
-		message.append(String.valueOf(value.operand) + DELIMIT);
-		message.append(String.valueOf(value.logPosition) + DELIMIT);
+		if (value == null) {
+			message.append("NULL" + DELIMIT);
+			message.append("NULL" + DELIMIT);
+			message.append("NULL" + DELIMIT);
+		}
+		else {
+			message.append(String.valueOf(value.operation) + DELIMIT);
+			message.append(String.valueOf(value.operand) + DELIMIT);
+			message.append(String.valueOf(value.logPosition) + DELIMIT);
+		}
 		message.append(String.valueOf(MSG_END));
 		return message.toString();
 	}

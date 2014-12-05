@@ -12,8 +12,8 @@ import java.util.Timer;
 import java.util.concurrent.Semaphore;
 
 public class Server {
-	final static int MAJORITY = 3;
-	final static int TOTAL_SERVER = 5;
+	final static int TOTAL_SERVER = 3;
+	final static int MAJORITY = TOTAL_SERVER / 2 + 1;
 	final static long WAIT_TIMEOUT = 1000;
 	final static long TRANSACTION_TIMEOUT = 5000;
 	Log log;
@@ -23,27 +23,28 @@ public class Server {
 	LogEntry decidedOperation;
 	boolean syncFlag;
 	ServerTimer userTimer;
-	
+
 	double balance;
-	
+
 	boolean mode; // ISPAXOS or not
-	
+
 	Messenger messenger;
 	Terminal terminal;
 	ServerTimer waitTimer;
-	
+
 	List<ConfirmMessage> confirmList;
 	int acceptCount;
 	List<Message> recvMessageList;
 	boolean serverSwitch;
 	String command;
 	Dispatcher dispatcher;
-	//Semaphore terminalLock = new Semaphore(1);
-	
+	boolean isProposer;
+	boolean prepareRequestFlag;
 	public Server(int serverNo) throws IOException {
 		this.serverNo = serverNo;
-		//isProposer = false;	
-		serverSwitch =true;
+		isProposer = false;
+		prepareRequestFlag = false;
+		serverSwitch = true;
 		currentOperation = null;
 		currentBallot = null;
 		waitTimer = new ServerTimer();
@@ -56,7 +57,8 @@ public class Server {
 		// start messenger
 		messenger = Messenger.getMessenger();
 		// start dispatcher
-		dispatcher = new Dispatcher(recvMessageList, messenger.getPort(serverNo));
+		dispatcher = new Dispatcher(recvMessageList,
+				messenger.getPort(serverNo));
 		dispatcher.start();
 		// start terminal
 		terminal = new Terminal();
@@ -66,186 +68,194 @@ public class Server {
 		log = new Log();
 		balance = log.getBalance();
 	}
+
 	public void run() throws UnknownHostException, IOException {
 		Message message = null;
 		Message reply = null;
-		synchronized(this) {
-			if(!recvMessageList.isEmpty()) 
+		synchronized (this) {
+			if (!recvMessageList.isEmpty())
 				message = recvMessageList.remove(0);
 		}
-		
-		synchronized(this) {
+
+		synchronized (this) {
 			command = terminal.getCommand();
 		}
-		if (syncFlag && message == null && command == null) return;
+		if (syncFlag && message == null && command == null)
+			return;
 		if (command != null)
 			interpret(command);
 		if (message != null && serverSwitch) {
-		switch(message.getType()) {
-		case ACCEPT:
-			if (userTimer.getTime() > TRANSACTION_TIMEOUT) {
-				notifyTerminal(false);
-				acceptCount = 0;
-				break;
-			}
-			AcceptMessage acceptMessage = (AcceptMessage)message;
-			if (acceptMessage.getBallot().compareTo(currentBallot) < 0)
-				// if the message contains a ballot less than the current ballot, no respond
-				break;
-			else if (acceptMessage.getBallot().compareTo(currentBallot) == 0 
-					&& acceptMessage.getAcceptLog().compareTo(currentOperation) == 0) {
-				// get an support from the other server
-				if ((++ acceptCount) >= MAJORITY - 1) {
-					// decide on the value and broadcast decide
-					makeDecision(currentOperation);
-					Message decideMessage = new DecideMessage(MessageType.DECIDE,
-														this.serverNo, 
-														Messenger.BROADCAST,
-														currentOperation);
-					// we dont periodically send decide message
+			switch (message.getType()) {
+			case ACCEPT:
+				if (userTimer.getTime() > TRANSACTION_TIMEOUT && isProposer) {
+					notifyTerminal(false);
 					acceptCount = 0;
-					messenger.sendMessage(decideMessage);
+					break;
 				}
-			}
-			else {
-				// ballot number equal but operation unequal is not possible
-			//	if (!isProposer) {
+				AcceptMessage acceptMessage = (AcceptMessage) message;
+				if (acceptMessage.getBallot().compareTo(currentBallot) < 0)
+					// if the message contains a ballot less than the current
+					// ballot, no respond
+					break;
+				else if (acceptMessage.getBallot().compareTo(currentBallot) == 0
+						&& acceptMessage.getAcceptLog().compareTo(
+								currentOperation) == 0) {
+					// get an support from the other server
+					if ((++acceptCount) >= MAJORITY) {
+						// decide on the value and broadcast decide
+						makeDecision(currentOperation);
+						Message decideMessage = new DecideMessage(
+								MessageType.DECIDE, this.serverNo,
+								Messenger.BROADCAST, currentOperation);
+						// we dont periodically send decide message
+						acceptCount = 0;
+						messenger.sendMessage(decideMessage);
+					}
+				} else {
+					// ballot number equal but operation unequal is not possible
+					if (acceptMessage.getAcceptLog()
+							.compareTo(currentOperation) != 0 && isProposer)
+						notifyTerminal(false);
 					// get an new operation to agree on
-					acceptCount = 0;
+					acceptCount = 1;
 					currentBallot = acceptMessage.getBallot();
 					currentOperation = acceptMessage.getAcceptLog();
 					// forward the message
 					acceptMessage.setReceiver(Messenger.BROADCAST);
 					messenger.sendMessage(acceptMessage);
-			//	}
-			}
-			
-			break;
-		case PREPARE:
-			PrepareMessage prepareMessage = (PrepareMessage)message;
-			if (currentBallot == null) {
-				// this server is not proposer
-				currentBallot = prepareMessage.getBallot();
-				reply = new ConfirmMessage(MessageType.CONFIRM, 
-								   serverNo, 
-								   message.getSender(),
-								   prepareMessage.getBallot(), 
-								   null, 
-								   null);
-			}
-			else {
-				if (currentBallot.compareTo(prepareMessage.getBallot()) < 0) {
-						reply = new ConfirmMessage(MessageType.CONFIRM, 
-							   		serverNo, 
-							   		message.getSender(),
-							   		prepareMessage.getBallot(), 
-							   		currentBallot, 
-									currentOperation);
 				}
-			}
-			messenger.sendMessage(reply);
-			break;
-		case SYNC_REQ: 
-			SyncReqMessage syncReqMessage = (SyncReqMessage)message;
-			List<LogEntry> complement = log.compareLog(syncReqMessage.getLogLength());
-			reply = new SyncAckMessage(MessageType.SYNC_ACK,
-									serverNo, 
-									syncReqMessage.getSender(),
-									complement);
-			break;
-		case SYNC_ACK:
-			SyncAckMessage syncAckMessage = (SyncAckMessage)message;
-			if (!syncFlag) {
-				log.synchronizeLogLists(syncAckMessage.getRecentLog());
-				syncFlag = true;
-			}
-			break;
-		case CONFIRM:
-			// it get this message because it start a proposal
-			ConfirmMessage confirmMessage = (ConfirmMessage)message;
-			synchronized(this) {
-				confirmList.add(confirmMessage);
-				if (confirmList.size() != TOTAL_SERVER && waitTimer.getTime() < WAIT_TIMEOUT)
-					break;
-			}
-			// check how many confirm Message that has ballot that is the same as the currentBallot 
-			Ballot recvMaxBallot = null;
-			LogEntry maxBallotValue = null;
-			for (int i = 0; i < confirmList.size(); i++) {
-				ConfirmMessage recvConfirm = confirmList.get(i);
-					if (recvMaxBallot.compareTo(recvConfirm.getAcceptBallot()) > 0) {
-							maxBallotValue = recvConfirm.getValue();
-							recvMaxBallot = recvConfirm.getAcceptBallot();
+
+				break;
+			case PREPARE:
+				PrepareMessage prepareMessage = (PrepareMessage) message;
+				if (currentBallot == null) {
+					// this server is not proposer
+					currentBallot = prepareMessage.getBallot();
+					reply = new ConfirmMessage(MessageType.CONFIRM, serverNo,
+							message.getSender(), prepareMessage.getBallot(),
+							null, null);
+				} else {
+					if (currentBallot.compareTo(prepareMessage.getBallot()) < 0) {
+						reply = new ConfirmMessage(MessageType.CONFIRM,
+								serverNo, message.getSender(),
+								prepareMessage.getBallot(), currentBallot,
+								currentOperation);
 					}
-			}
-			if (confirmList.size() >= MAJORITY - 1) {
-				Message acceptRequest;
-				if (maxBallotValue == null){
-					//broadcast accept request with currentOperation
-					acceptRequest = new AcceptMessage(MessageType.ACCEPT,
-							serverNo, 
-							Messenger.BROADCAST,
-							currentBallot, 
-							currentOperation);
 				}
-				else {
-					//broadcast accept with recvMaxBallot
-					acceptRequest = new AcceptMessage(MessageType.ACCEPT,
-							serverNo, 
-							Messenger.BROADCAST,
-							currentBallot,
-							maxBallotValue);
+				messenger.sendMessage(reply);
+				break;
+			case SYNC_REQ:
+				SyncReqMessage syncReqMessage = (SyncReqMessage) message;
+				List<LogEntry> complement = log.compareLog(syncReqMessage
+						.getLogLength());
+				reply = new SyncAckMessage(MessageType.SYNC_ACK, serverNo,
+						syncReqMessage.getSender(), complement);
+				break;
+			case SYNC_ACK:
+				SyncAckMessage syncAckMessage = (SyncAckMessage) message;
+				if (!syncFlag) {
+					log.synchronizeLogLists(syncAckMessage.getRecentLog());
+					syncFlag = true;
 				}
-				messenger.sendMessage(acceptRequest);
+				break;
+			case CONFIRM:
+				// it get this message because it start a proposal
+				ConfirmMessage confirmMessage = (ConfirmMessage) message;
+				synchronized (this) {
+					confirmList.add(confirmMessage);
+					if (confirmList.size() != TOTAL_SERVER
+							&& waitTimer.getTime() < WAIT_TIMEOUT)
+						break;
+				}
+				// check how many confirm Message that has ballot that is the
+				// same as the currentBallot
+				Ballot recvMaxBallot = null;
+				LogEntry maxBallotValue = null;
+				for (int i = 0; i < confirmList.size(); i++) {
+					ConfirmMessage recvConfirm = confirmList.get(i);
+					if (recvMaxBallot == null
+							|| recvMaxBallot.compareTo(recvConfirm
+									.getAcceptBallot()) > 0) {
+						maxBallotValue = recvConfirm.getValue();
+						recvMaxBallot = recvConfirm.getAcceptBallot();
+					}
+				}
+				if (confirmList.size() >= MAJORITY) {
+					prepareRequestFlag = true;
+					Message acceptRequest;
+					confirmList.clear();
+					if (maxBallotValue == null) {
+						// broadcast accept request with currentOperation
+						acceptRequest = new AcceptMessage(MessageType.ACCEPT,
+								serverNo, Messenger.BROADCAST, currentBallot,
+								currentOperation);
+					} else {
+						// broadcast accept with recvMaxBallot
+						acceptRequest = new AcceptMessage(MessageType.ACCEPT,
+								serverNo, Messenger.BROADCAST, currentBallot,
+								maxBallotValue);
+					}
+					messenger.sendMessage(acceptRequest);
+				} 
+				else if (!prepareRequestFlag){
+					// return failure
+					notifyTerminal(false);
+				}
+				break;
+			case DECIDE:
+				DecideMessage decideMessage = (DecideMessage) message;
+				// two reception of decision on the same operation is not
+				// possible
+				if (decideMessage.getValue().compareTo(decidedOperation) != 0) {
+					if (currentOperation.compareTo(decideMessage.getValue()) == 0
+							&& isProposer) {
+						notifyTerminal(true);
+					}
+					makeDecision(decideMessage.getValue());
+				}
+				break;
 			}
-			else {
-				//return failure
-				notifyTerminal(false);
-			}
-			break;
-		case DECIDE: 
-			DecideMessage decideMessage = (DecideMessage)message;
-			// two reception of decision on the same operation is not possible
-			if (decideMessage.getValue().compareTo(decidedOperation) != 0)
-				makeDecision(decideMessage.getValue());
-			break;
 		}
 	}
-	}
-	
+
 	private void notifyTerminal(boolean success) {
-		terminal.clearCommand();
+		isProposer = false;
+		prepareRequestFlag = false;
 		String indicator = success ? "SUCCEED" : "FAIL";
-		System.out.println("The Last Operation " + currentOperation + indicator);
+		System.out
+				.println("The Last Operation " + currentOperation + indicator);
 	}
-	
+
 	public void startProposal() throws UnknownHostException, IOException {
-		if (!syncFlag) return;
+		if (!syncFlag)
+			return;
 		updateBallot();
-		Message newProposal = new PrepareMessage(MessageType.PREPARE, 
-											serverNo, 
-											Messenger.BROADCAST,
-											currentBallot);
+		isProposer = true;
+		Message newProposal = new PrepareMessage(MessageType.PREPARE, serverNo,
+				Messenger.BROADCAST, currentBallot);
+		confirmList.clear();
+		confirmList.add(new ConfirmMessage(MessageType.CONFIRM, serverNo,
+				this.serverNo, this.currentBallot, null, null));
 		waitTimer.resetTimer();
-		acceptCount = 0;
+		acceptCount = 1;
 		messenger.sendMessage(newProposal);
 	}
 
-	private void startSynchronization() throws UnknownHostException, IOException {
-		Message syncReq = new SyncReqMessage(MessageType.SYNC_REQ, 
-				serverNo, 
-				Messenger.BROADCAST,
-				log.getLogPosition());
+	private void startSynchronization() throws UnknownHostException,
+			IOException {
+		Message syncReq = new SyncReqMessage(MessageType.SYNC_REQ, serverNo,
+				Messenger.BROADCAST, log.getLogPosition());
 		messenger.sendMessage(syncReq);
 	}
-	
+
 	private void updateBallot() {
 		if (currentBallot == null)
 			currentBallot = new Ballot(1, serverNo);
-		else 
-			currentBallot = new Ballot(currentBallot.getBallotNumber() + 1, serverNo);
+		else
+			currentBallot = new Ballot(currentBallot.getBallotNumber() + 1,
+					serverNo);
 	}
-	
+
 	public static void main(String[] args) throws IOException {
 		Server server;
 		String serverNumberString = null;
@@ -265,8 +275,8 @@ public class Server {
 				serverNumberString = getCorrestInput();
 		}
 		while (true) {
-			
-				server.run();
+
+			server.run();
 		}
 	}
 
@@ -284,10 +294,10 @@ public class Server {
 		}
 
 	}
-	
+
 	private void makeDecision(LogEntry operation) {
 		log.appendLogEntry(operation);
-		currentBallot = null;		
+		currentBallot = null;
 		currentOperation = null;
 		System.out.println(operation);
 		waitTimer.resetTimer();
@@ -311,12 +321,12 @@ public class Server {
 				try {
 					double value = Double.parseDouble(valueString);
 					// start proposal with currentBallot and currentOperation
-					currentOperation = new LogEntry("deposit", value, log.getLogPosition());
-					if (!syncFlag) 
+					currentOperation = new LogEntry("deposit", value,
+							log.getLogPosition());
+					if (!syncFlag)
 						System.out.println("Unsynchronized!");
 					else {
 						startProposal();
-						System.out.println("deposit  " + value);
 					}
 				} catch (NumberFormatException ex) {
 					handleInvalidInput();
@@ -334,12 +344,12 @@ public class Server {
 				try {
 					double value = Double.parseDouble(valueString);
 					// start proposal with currentBallot and currentOperation
-					currentOperation = new LogEntry("deposit", value, log.getLogPosition());
-					if (!syncFlag) 
+					currentOperation = new LogEntry("deposit", value,
+							log.getLogPosition());
+					if (!syncFlag)
 						System.out.println("Unsynchronized!");
 					else {
 						startProposal();
-						System.out.println("withdraw  " + value);
 					}
 				} catch (NumberFormatException ex) {
 					handleInvalidInput();
@@ -363,8 +373,8 @@ public class Server {
 				if (syncFlag) {
 					System.out.println("get Balance ");
 					System.out.println(balance);
-				}
-				else System.out.println("unsynchronized");
+				} else
+					System.out.println("unsynchronized");
 			} else {
 				handleInvalidInput();
 			}
@@ -382,6 +392,7 @@ public class Server {
 			handleInvalidInput();
 		}
 		command = null;
+		terminal.command = null;
 	}
 
 	public void handleInvalidInput() {
