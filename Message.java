@@ -100,8 +100,10 @@ abstract class Message {
 		case "DECIDE":			
 			LogEntry decideLog = new LogEntry(bodyParts[0],
 					Double.parseDouble(bodyParts[1]));
+			Ballot decidedBallot = new Ballot(Integer.parseInt(bodyParts[2]),
+					Integer.parseInt(bodyParts[3]));
 			return new DecideMessage(MessageType.DECIDE, sender, receiver,
-					decideLog);
+					decideLog, decidedBallot);
 		case "SYNC_REQ":
 			int logLength = Integer.parseInt(bodyParts[0]);
 			return new SyncReqMessage(MessageType.SYNC_REQ, sender, receiver,
@@ -197,18 +199,23 @@ class AcceptMessage extends Message {
 
 class DecideMessage extends Message {
 	/*
-	 * BODY Field Content LOG_POS log position
+	 * BODY Field Content 
+	 * LOG_POS operation
+	 * LOG_BAL log ballot
 	 */
 	LogEntry value;
-
+	Ballot ballot;
 	public LogEntry getValue() {
 		return value;
 	}
-
+	public Ballot getBallot() {
+		return ballot;
+	}
 	public DecideMessage(MessageType type, int sender, int receiver,
-			LogEntry value) {
+			LogEntry value, Ballot ballot) {
 		super(type, receiver);
 		this.value = value;
+		this.ballot = ballot;
 	}
 
 	public String translate() {
@@ -216,6 +223,8 @@ class DecideMessage extends Message {
 		message.append(super.translate());
 		message.append(String.valueOf(value.operation) + DELIMIT);
 		message.append(String.valueOf(value.operand) + DELIMIT);
+		message.append(String.valueOf(ballot.ballotNumber) + DELIMIT);
+		message.append(String.valueOf(ballot.serverNumber) + DELIMIT);
 		message.append(String.valueOf(MSG_END));
 		return message.toString();
 	}
