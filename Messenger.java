@@ -12,12 +12,13 @@ public class Messenger {
 	Map<Integer, String> addrMap;
 	Map<Integer, Integer> portMap;
 
-	public int getPort(int receiver) {
+	public int getPort(Integer receiver) {
 		return portMap.get(receiver);
 	}
-	private Messenger() {
+	private Messenger() throws IOException {
 		addrMap = new HashMap<Integer, String>();
 		portMap = new HashMap<Integer, Integer>();
+		readAddress();
 	}
 	public void setAddress(int serverNo, String ip) throws UnknownHostException, IOException {
 		addrMap.put(serverNo, ip);
@@ -42,27 +43,24 @@ public class Messenger {
 		return new Socket(addrMap.get(receiver), portMap.get(receiver));
 	} 
 	
-	public static Messenger getMessenger() {
+	public static Messenger getMessenger() throws IOException {
 		if (messengerInstance == null) 
 			return messengerInstance = new Messenger();
 		return messengerInstance;
 	}
 	
-	public void sendMessage(Message message){
+	public void sendMessage(Message message) throws UnknownHostException, IOException{
 		if (message.getReceiver() == BROADCAST) {
 			for (Integer receiver : addrMap.keySet()) {
+				if (receiver.equals(message.getSender()))
+					continue;
 				message.setReceiver(receiver);
-				try {
 					Socket socket = getSocket(receiver);
 					OutputStream out = socket.getOutputStream();
 					OutputStreamWriter writer = new OutputStreamWriter(out, "UTF-8");
 					BufferedWriter bufferedWriter = new BufferedWriter(writer);
 					bufferedWriter.write(message.translate());
 					bufferedWriter.flush();
-				}
-				catch(IOException ex) {
-					System.out.println("Broadcasting Message Error!");
-				}
 			}
 		}
 		else {

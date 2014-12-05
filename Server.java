@@ -3,6 +3,7 @@ package server;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.net.UnknownHostException;
 import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
@@ -29,7 +30,7 @@ public class Server {
 	
 	Messenger messenger;
 	Terminal terminal;
-	ServerTimer timer;
+	ServerTimer waitTimer;
 	
 	List<ConfirmMessage> confirmList;
 	int acceptCount;
@@ -39,13 +40,14 @@ public class Server {
 	Dispatcher dispatcher;
 	//Semaphore terminalLock = new Semaphore(1);
 	
-	public Server(int serverNo) {
+	public Server(int serverNo) throws IOException {
 		this.serverNo = serverNo;
 		//isProposer = false;	
 		serverSwitch =true;
 		currentOperation = null;
 		currentBallot = null;
-		timer = new ServerTimer();
+		waitTimer = new ServerTimer();
+		userTimer = new ServerTimer();
 		// initialize messagelist, confirmlist
 		command = null;
 		recvMessageList = new LinkedList<Message>();
@@ -55,16 +57,16 @@ public class Server {
 		messenger = Messenger.getMessenger();
 		// start dispatcher
 		dispatcher = new Dispatcher(recvMessageList, messenger.getPort(serverNo));
-		dispatcher.run();
+		dispatcher.start();
 		// start terminal
 		terminal = new Terminal();
-		terminal.run();
+		terminal.start();
 		syncFlag = true;
 		// read in log
 		log = new Log();
 		balance = log.getBalance();
 	}
-	public void run() {
+	public void run() throws UnknownHostException, IOException {
 		Message message = null;
 		Message reply = null;
 		synchronized(this) {
@@ -163,7 +165,7 @@ public class Server {
 			ConfirmMessage confirmMessage = (ConfirmMessage)message;
 			synchronized(this) {
 				confirmList.add(confirmMessage);
-				if (confirmList.size() != TOTAL_SERVER && timer.getTime() < WAIT_TIMEOUT)
+				if (confirmList.size() != TOTAL_SERVER && waitTimer.getTime() < WAIT_TIMEOUT)
 					break;
 			}
 			// check how many confirm Message that has ballot that is the same as the currentBallot 
@@ -217,19 +219,19 @@ public class Server {
 		System.out.println("The Last Operation " + currentOperation + indicator);
 	}
 	
-	public void startProposal() {
+	public void startProposal() throws UnknownHostException, IOException {
 		if (!syncFlag) return;
 		updateBallot();
 		Message newProposal = new PrepareMessage(MessageType.PREPARE, 
 											serverNo, 
 											Messenger.BROADCAST,
 											currentBallot);
-		timer.resetTimer();
+		waitTimer.resetTimer();
 		acceptCount = 0;
 		messenger.sendMessage(newProposal);
 	}
 
-	private void startSynchronization() {
+	private void startSynchronization() throws UnknownHostException, IOException {
 		Message syncReq = new SyncReqMessage(MessageType.SYNC_REQ, 
 				serverNo, 
 				Messenger.BROADCAST,
@@ -244,7 +246,7 @@ public class Server {
 			currentBallot = new Ballot(currentBallot.getBallotNumber() + 1, serverNo);
 	}
 	
-	public static void main(String[] args) {
+	public static void main(String[] args) throws IOException {
 		Server server;
 		String serverNumberString = null;
 		if (args.length == 1) {
@@ -261,7 +263,6 @@ public class Server {
 				}
 			} else
 				serverNumberString = getCorrestInput();
-			;
 		}
 		while (true) {
 			
@@ -289,12 +290,12 @@ public class Server {
 		currentBallot = null;		
 		currentOperation = null;
 		System.out.println(operation);
-		timer.resetTimer();
+		waitTimer.resetTimer();
 		confirmList.clear();
 		decidedOperation = operation;
 	}
 
-	public void interpret(String s) {
+	public void interpret(String s) throws UnknownHostException, IOException {
 		if (s == null || s.length() == 0)
 			return;
 		String command = s.trim().toLowerCase();
@@ -380,6 +381,7 @@ public class Server {
 		default:
 			handleInvalidInput();
 		}
+		command = null;
 	}
 
 	public void handleInvalidInput() {

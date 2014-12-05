@@ -27,9 +27,10 @@ abstract class Message {
 		return type;
 	}
 
-	public Message(MessageType type, int receiver) {
+	public Message(MessageType type, int receiver, int sender) {
 		this.type = type;
 		this.receiver = receiver;
+		this.sender = sender;
 	}
 
 	public void setReceiver(int receiver) {
@@ -170,7 +171,7 @@ class AcceptMessage extends Message {
 
 	public AcceptMessage(MessageType type, int sender, int receiver,
 			Ballot ballot, LogEntry acceptLog) {
-		super(type, receiver);
+		super(type, receiver, sender);
 		this.ballot = ballot;
 		this.acceptLog = acceptLog;
 	}
@@ -208,7 +209,7 @@ class DecideMessage extends Message {
 	}
 	public DecideMessage(MessageType type, int sender, int receiver,
 			LogEntry value) {
-		super(type, receiver);
+		super(type, receiver,sender);
 		this.value = value;
 	}
 
@@ -230,7 +231,7 @@ class PrepareMessage extends Message {
 	Ballot ballot;
 
 	public PrepareMessage(MessageType type, int sender, int receiver, Ballot ballot) {
-		super(type, receiver);
+		super(type, receiver, sender);
 		this.ballot = ballot;
 	}
 
@@ -264,7 +265,7 @@ class ConfirmMessage extends Message {
 
 	public ConfirmMessage(MessageType type, int sender, int receiver,
 			Ballot acceptB, Ballot recvB, LogEntry acceptValue) {
-		super(type, receiver);
+		super(type, receiver, sender);
 		this.acceptBallot = acceptB;
 		this.recvBallot = recvB;
 		this.value = acceptValue;
@@ -308,7 +309,7 @@ class SyncReqMessage extends Message {
 
 	public SyncReqMessage(MessageType type, int sender, int receiver,
 			int logLength) {
-		super(type, receiver);
+		super(type, receiver, sender);
 		this.logLength = logLength;
 	}
 
@@ -334,7 +335,7 @@ class SyncAckMessage extends Message {
 	public SyncAckMessage(MessageType type, int sender, int receiver,
 			List<LogEntry> recentLog) {
 
-		super(type, receiver);
+		super(type, receiver, sender);
 		this.recentLog = recentLog;
 	}
 
