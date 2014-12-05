@@ -12,13 +12,15 @@ import java.util.List;
 
 public class Log {
 	LinkedList<LogEntry> logs = new LinkedList<LogEntry>();
+	int nextPosition;
 	boolean synchFlag;
 
 	public Log() {
+		nextPosition =0;
 		load();
 	}
 	public int getLogPosition() {
-		return logs.size();
+		return nextPosition;
 	}
 	
 	private void load() {
@@ -38,7 +40,8 @@ public class Log {
 				String[] array = line.split("\\s+");
 				//Operation operation = Operation.getEnumFromString(array[0]);
 				double operand = Double.parseDouble(array[1]);
-				appendLogEntry(new LogEntry(array[0], operand));
+				appendLogEntry(new LogEntry(array[0], operand,nextPosition));
+				nextPosition++;
 				line = br.readLine();
 			}
 
@@ -59,8 +62,10 @@ public class Log {
 		} catch (IOException e) {
 		}
 	}
-
-	boolean verifyLogs(double currentBalance) {
+	public int getLogLength(){
+		return logs.size();
+	}
+	public boolean verifyLogs(double currentBalance) {
 		double sum = 0;
 		for (LogEntry e : logs) {
 			switch (e.operation.toLowerCase()) {
@@ -76,7 +81,7 @@ public class Log {
 		return sum == currentBalance;
 	}
 	
-	double getBalance() {
+	public double getBalance() {
 		double sum = 0;
 		for (LogEntry e : logs) {
 			switch (e.operation.toLowerCase()) {
