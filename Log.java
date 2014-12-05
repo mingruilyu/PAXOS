@@ -59,8 +59,10 @@ public class Log {
 		} catch (IOException e) {
 		}
 	}
-
-	boolean verifyLogs(double currentBalance) {
+	public int getLogLength(){
+		return logs.size();
+	}
+	public boolean verifyLogs(double currentBalance) {
 		double sum = 0;
 		for (LogEntry e : logs) {
 			switch (e.operation.toLowerCase()) {
@@ -76,7 +78,7 @@ public class Log {
 		return sum == currentBalance;
 	}
 	
-	double getBalance() {
+	public double getBalance() {
 		double sum = 0;
 		for (LogEntry e : logs) {
 			switch (e.operation.toLowerCase()) {
