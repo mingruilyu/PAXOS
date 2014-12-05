@@ -26,7 +26,7 @@ public class Log {
 	private void load() {
 
 		try {
-			String pathname = "E:\\2014Fall\\CS271\\Paxos\\log\\log.txt";
+			String pathname = "log.txt";
 			File logFile = new File(pathname);
 			if (!logFile.exists()) {
 				return;
@@ -54,7 +54,7 @@ public class Log {
 
 		try {
 			BufferedWriter out = new BufferedWriter(new FileWriter(
-					"E:\\2014Fall\\CS271\\Paxos\\log\\log.txt"));
+					"log.txt"));
 			for (LogEntry e : logs) {
 				out.write(e.operation + "  " + e.operand + "\r\n");
 			}
