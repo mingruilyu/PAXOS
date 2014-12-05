@@ -10,22 +10,24 @@ public class Messenger {
 	final static int BROADCAST = -1;
 	static private Messenger messengerInstance;
 	Map<Integer, String> addrMap;
-
-
-	/*OutputStream outputStream;
-	InputStream inputStream;
-	OutputStreamWriter outputStreamWriter;
-	InputStreamReader inputStreamReader;
-	BufferedReader bufferedReader;
-	BufferedWriter bufferedWriter;*/
+	
 	private Messenger() {
 		addrMap = new HashMap<Integer, String>();
 	}
 	
-	public void setAddress(Map<Integer, String> ipMap) throws UnknownHostException, IOException {
-		if (ipMap == null) return;
-		for (Integer serNo : ipMap.keySet()) 
-			addrMap.put(serNo, ipMap.get(serNo));
+	public void setAddress(int serverNo, String ip) throws UnknownHostException, IOException {
+		addrMap.put(serverNo, ip);
+	}
+	
+	public void readAddress() throws IOException {
+		String path = "ip.txt";
+		BufferedReader in = new BufferedReader(new FileReader(path));
+		String text;
+		while ((text = in.readLine()) != null) {
+			String[] serverAddr = text.split("\t");
+			setAddress(Integer.parseInt(serverAddr[0]), serverAddr[1]);
+		} 
+		in.close();
 	}
 	
 	public Socket getSocket(int receiver) throws UnknownHostException, IOException {

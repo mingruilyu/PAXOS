@@ -121,6 +121,19 @@ abstract class Message {
 
 }
 
+
+class BallotComparator implements Comparator<Ballot> {
+
+	@Override
+	public int compare(Ballot bal1, Ballot bal2) {
+		if (bal1 == null && bal2 == null) return 0;
+		else if (bal1 == null) return -1;
+		else if (bal2 == null) return -1;
+		else return bal1.compareTo(bal2);
+	}
+	
+}
+
 class Ballot implements Comparable<Ballot> {
 	int ballotNumber;
 	int serverNumber;
@@ -214,8 +227,7 @@ class PrepareMessage extends Message {
 	 */
 	Ballot ballot;
 
-	public PrepareMessage(MessageType type, int sender, int receiver,
-			Ballot ballot) {
+	public PrepareMessage(MessageType type, int sender, int receiver, Ballot ballot) {
 		super(type, receiver);
 		this.ballot = ballot;
 	}
