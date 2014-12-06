@@ -12,15 +12,14 @@ import java.util.List;
 
 public class Log {
 	LinkedList<LogEntry> logs = new LinkedList<LogEntry>();
-	int nextPosition;
 	boolean synchFlag;
 
 	public Log() {
-		nextPosition =0;
+		logs = new LinkedList<LogEntry>();
 		load();
 	}
 	public int getLogPosition() {
-		return nextPosition;
+		return logs.size()+1;
 	}
 	
 	private void load() {
@@ -40,8 +39,7 @@ public class Log {
 				String[] array = line.split("\\s+");
 				//Operation operation = Operation.getEnumFromString(array[0]);
 				double operand = Double.parseDouble(array[1]);
-				appendLogEntry(new LogEntry(array[0], operand,nextPosition));
-				nextPosition++;
+				appendLogEntry(new LogEntry(array[0], operand,logs.size()+1));				
 				line = br.readLine();
 			}
 
