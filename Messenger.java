@@ -51,7 +51,6 @@ public class Messenger {
 	
 	public void sendMessage(Message message) throws UnknownHostException, IOException{
 		if (message.getReceiver() == BROADCAST) {
-			
 			for (Integer receiver : addrMap.keySet()) {
 				if (receiver.equals(message.getSender()))
 					continue;
@@ -62,6 +61,7 @@ public class Messenger {
 					BufferedWriter bufferedWriter = new BufferedWriter(writer);
 					bufferedWriter.write(message.translate());
 					bufferedWriter.flush();
+					System.out.println("MESSAGE: " + message.translate());
 			}
 		}
 		else {
@@ -72,6 +72,7 @@ public class Messenger {
 			BufferedWriter bufferedWriter = new BufferedWriter(writer);
 			bufferedWriter.write(message.translate());
 			bufferedWriter.flush();
+			System.out.println("MESSAGE: " + message.translate());
 		}
 		catch(IOException ex) {
 			System.out.println("Sending Message Error!");
