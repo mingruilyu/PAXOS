@@ -22,7 +22,8 @@ abstract class Message {
 	int sender;
 	int receiver;
 	MessageType type;
-
+	static int globalmessageCount = 0;
+	
 	public MessageType getType() {
 		return type;
 	}
@@ -51,6 +52,7 @@ abstract class Message {
 
 	public String translate() {
 		StringBuilder header = new StringBuilder();
+		header.append(String.valueOf(globalmessageCount ++) + DELIMIT);
 		header.append(String.valueOf(sender) + DELIMIT);
 		header.append(String.valueOf(receiver) + DELIMIT);
 		header.append(type);
@@ -60,13 +62,16 @@ abstract class Message {
 
 	public static Message parseMessage(String messageString) {
 		String[] headerParts = messageString.split(
-				String.valueOf(Message.DELIMIT), 4);
-		int sender = Integer.parseInt(headerParts[0]);
-		int receiver = Integer.parseInt(headerParts[1]);
-		String[] bodyParts = headerParts[3].split(String
+				String.valueOf(Message.DELIMIT), 5);
+		int newCount = Integer.parseInt(headerParts[0]);
+		if (newCount > globalmessageCount) globalmessageCount = newCount;
+		int sender = Integer.parseInt(headerParts[1]);
+		int receiver = Integer.parseInt(headerParts[2]);
+		String[] bodyParts = headerParts[4].split(String
 				.valueOf(Message.DELIMIT));
-
-		switch (headerParts[2]) {
+		System.out.print("No. : " + globalmessageCount + "\t");
+		System.out.println(messageString);
+		switch (headerParts[3]) {
 		case "PREPARE":
 			int ballotNumber = Integer.parseInt(bodyParts[0]);
 			int serverNumber = Integer.parseInt(bodyParts[1]);
@@ -122,6 +127,7 @@ abstract class Message {
 			return new SyncAckMessage(MessageType.SYNC_ACK, sender, receiver,
 					logs);
 		}
+
 		return null;
 	}
 
@@ -191,6 +197,8 @@ class AcceptMessage extends Message {
 		message.append(String.valueOf(acceptLog.operand) + DELIMIT);
 		message.append(String.valueOf(acceptLog.logPosition) + DELIMIT);
 		message.append(String.valueOf(MSG_END));
+		System.out.print("No. : " + globalmessageCount + "\t");
+		System.out.println(message.toString());
 		return message.toString();
 	}
 
@@ -226,6 +234,8 @@ class DecideMessage extends Message {
 		message.append(String.valueOf(value.operand) + DELIMIT);
 		message.append(String.valueOf(value.logPosition) + DELIMIT);
 		message.append(String.valueOf(MSG_END));
+		System.out.print("No. : " + globalmessageCount + "\t");
+		System.out.println(message.toString());
 		return message.toString();
 	}
 }
@@ -251,6 +261,8 @@ class PrepareMessage extends Message {
 		message.append(String.valueOf(ballot.ballotNumber) + DELIMIT);
 		message.append(String.valueOf(ballot.serverNumber) + DELIMIT);
 		message.append(String.valueOf(MSG_END));
+		System.out.print("No. : " + globalmessageCount + "\t");
+		System.out.println(message.toString());
 		return message.toString();
 	}
 }
@@ -311,6 +323,8 @@ class ConfirmMessage extends Message {
 			message.append(String.valueOf(value.logPosition) + DELIMIT);
 		}
 		message.append(String.valueOf(MSG_END));
+		System.out.print("No. : " + globalmessageCount + "\t");
+		System.out.println(message.toString());
 		return message.toString();
 	}
 }
