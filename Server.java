@@ -153,7 +153,7 @@ public class Server {
 					state = State.STATE_CONFIRM;
 					break;
 				default:
-					System.out.println("Undefined State!");
+					System.out.println("Redundant Message!");
 				}
 			}
 			break;
@@ -196,6 +196,7 @@ public class Server {
 						}
 						break;
 					case DECIDE:
+						if(checkRedundantMessage(message)) break;
 						DecideMessage decideMessage = (DecideMessage) message;
 						currentOperation = decideMessage.getValue();
 						makeDecision(decideMessage.getValue());
@@ -273,6 +274,7 @@ public class Server {
 
 				switch (message.getType()) {
 				case DECIDE:
+					if(checkRedundantMessage(message)) break;
 					DecideMessage decideMessage = (DecideMessage) message;
 					currentOperation = decideMessage.getValue();
 					makeDecision(decideMessage.getValue());
@@ -339,7 +341,7 @@ public class Server {
 						
 						Message reply = new ConfirmMessage(MessageType.CONFIRM,
 								serverNo, message.getSender(),
-								prepareMessage.getBallot(), currentBallot, null);
+								prepareMessage.getBallot(), currentBallot, currentOperation);
 						currentBallot = prepareMessage.getBallot();
 						acceptCount = 0;
 						messenger.sendMessage(reply);
@@ -347,6 +349,7 @@ public class Server {
 					}
 					break;
 				case DECIDE:
+					if(checkRedundantMessage(message)) break;
 					DecideMessage decideMessage = (DecideMessage) message;
 					currentOperation = decideMessage.getValue();
 					makeDecision(decideMessage.getValue());
@@ -364,6 +367,7 @@ public class Server {
 							.getBallot()) == 0) {
 						if ((++acceptCount) >= MAJORITY) {
 							// decide on the value and broadcast decide
+							if(checkRedundantMessage(message)) break;
 							DecideMessage newDecideMessage = new DecideMessage(
 									MessageType.DECIDE, this.serverNo,
 									Messenger.BROADCAST, currentOperation);
@@ -407,6 +411,7 @@ public class Server {
 					}
 					break;
 				case DECIDE:
+					if(checkRedundantMessage(message)) break;
 					DecideMessage decideMessage = (DecideMessage) message;
 					currentOperation = decideMessage.getValue();
 					makeDecision(decideMessage.getValue());
@@ -422,6 +427,7 @@ public class Server {
 							.getBallot()) == 0) {
 						if ((++acceptCount) >= MAJORITY) {
 							// decide on the value and broadcast decide
+							if(checkRedundantMessage(message)) break;
 							DecideMessage newDecideMessage = new DecideMessage(
 									MessageType.DECIDE, this.serverNo,
 									Messenger.BROADCAST, currentOperation);
