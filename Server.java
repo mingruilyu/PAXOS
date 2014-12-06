@@ -10,7 +10,7 @@ import java.util.List;
 public class Server {
 	final static int TOTAL_SERVER = 3;
 	final static int MAJORITY = TOTAL_SERVER / 2 + 1;
-	final static long TRANSACTION_TIMEOUT = 1000 * 480;
+	final static long TRANSACTION_TIMEOUT = 1000 * 4800;
 	State state;
 
 	enum State {
@@ -162,12 +162,13 @@ public class Server {
 						PrepareMessage prepareMessage = (PrepareMessage) message;
 						if (prepareMessage.getBallot().compareTo(currentBallot) > 0) {
 							notifyTerminal(false);
+							currentBallot = prepareMessage.getBallot();
 							Message reply = new ConfirmMessage(
 									MessageType.CONFIRM, serverNo,
 									message.getSender(),
-									prepareMessage.getBallot(), currentBallot,
-									currentOperation);
-							currentBallot = prepareMessage.getBallot();
+									prepareMessage.getBallot(), 
+									currentBallot,
+									null);
 							messenger.sendMessage(reply);
 							acceptCount = 0;
 							state = State.STATE_CONFIRM;
@@ -266,10 +267,10 @@ public class Server {
 				case PREPARE:
 					PrepareMessage prepareMessage = (PrepareMessage) message;
 					if (currentBallot.compareTo(prepareMessage.getBallot()) < 0) {
-						currentBallot = prepareMessage.getBallot();
-						Message reply = new ConfirmMessage(MessageType.CONFIRM,
+							Message reply = new ConfirmMessage(MessageType.CONFIRM,
 								serverNo, message.getSender(),
-								prepareMessage.getBallot(), null, null);
+								prepareMessage.getBallot(), currentBallot, null);
+							currentBallot = prepareMessage.getBallot();
 						messenger.sendMessage(reply);
 					}
 					confirmList.clear();
@@ -295,10 +296,11 @@ public class Server {
 
 					if (currentBallot.compareTo(prepareMessage.getBallot()) < 0) {
 						notifyTerminal(false);
-						currentBallot = prepareMessage.getBallot();
+						
 						Message reply = new ConfirmMessage(MessageType.CONFIRM,
 								serverNo, message.getSender(),
-								prepareMessage.getBallot(), null, null);
+								prepareMessage.getBallot(), currentBallot, null);
+						currentBallot = prepareMessage.getBallot();
 						acceptCount = 0;
 						messenger.sendMessage(reply);
 						state = State.STATE_CONFIRM;
@@ -427,10 +429,11 @@ public class Server {
 	private void notifyTerminal(boolean success) {
 		String indicator = success ? "SUCCEED" : "FAIL";
 		userTimer.turnOff();
-		currentBallot = null;
-		currentOperation = null;
 		System.out
 				.println("The Last Operation " + currentOperation + indicator);
+		currentBallot = null;
+		currentOperation = null;
+		confirmList.clear();
 	}
 
 	public void startProposal(LogEntry nextOperation)
@@ -484,9 +487,6 @@ public class Server {
 	private void makeDecision(LogEntry operation) {
 		log.appendLogEntry(operation);
 		notifyTerminal(true);
-		currentBallot = null;
-		currentOperation = null;
-		confirmList.clear();
 		acceptCount = 0;
 		state = State.STATE_START;
 	}

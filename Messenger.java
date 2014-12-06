@@ -51,6 +51,7 @@ public class Messenger {
 	
 	public void sendMessage(Message message) throws UnknownHostException, IOException{
 		if (message.getReceiver() == BROADCAST) {
+			
 			for (Integer receiver : addrMap.keySet()) {
 				if (receiver.equals(message.getSender()))
 					continue;
