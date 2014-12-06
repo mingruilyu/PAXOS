@@ -111,6 +111,10 @@ public class Server {
 		switch (state) {
 		case STATE_START:
 			if (message != null) {
+				System.out.println("ACCEPTCOUNT: " + acceptCount);
+				System.out.println("CURRENTBALLOT: " + currentBallot);
+				System.out.println("CURRENTVAL: " + currentOperation);
+				System.out.println("CONFIRMLIST" + confirmList.size());
 				switch (message.getType()) {
 				case ACCEPT:
 					if(checkRedundantMessage(message)) break;
@@ -157,6 +161,11 @@ public class Server {
 				break;
 			} else {
 				if (message != null) {
+					System.out.println("ACCEPTCOUNT: " + acceptCount);
+					System.out.println("CURRENTBALLOT: " + currentBallot);
+					System.out.println("CURRENTVAL: " + currentOperation);
+					System.out.println("CONFIRMLIST" + confirmList.size());
+
 					switch (message.getType()) {
 					case PREPARE:
 						PrepareMessage prepareMessage = (PrepareMessage) message;
@@ -239,9 +248,15 @@ public class Server {
 			break;
 		case STATE_CONFIRM:
 			if (message != null) {
+				System.out.println("ACCEPTCOUNT: " + acceptCount);
+				System.out.println("CURRENTBALLOT: " + currentBallot);
+				System.out.println("CURRENTVAL: " + currentOperation);
+				System.out.println("CONFIRMLIST" + confirmList.size());
+
 				switch (message.getType()) {
 				case DECIDE:
 					DecideMessage decideMessage = (DecideMessage) message;
+					currentOperation = decideMessage.getValue();
 					makeDecision(decideMessage.getValue());
 					break;
 				case ACCEPT:
@@ -290,6 +305,11 @@ public class Server {
 				break;
 			}
 			if (message != null) {
+				System.out.println("ACCEPTCOUNT: " + acceptCount);
+				System.out.println("CURRENTBALLOT: " + currentBallot);
+				System.out.println("CURRENTVAL: " + currentOperation);
+				System.out.println("CONFIRMLIST" + confirmList.size());
+
 				switch (message.getType()) {
 				case PREPARE:
 					PrepareMessage prepareMessage = (PrepareMessage) message;
@@ -339,6 +359,11 @@ public class Server {
 			break;
 		case STATE_ACCEPTOR_ACCEPT:
 			if (message != null) {
+				System.out.println("ACCEPTCOUNT: " + acceptCount);
+				System.out.println("CURRENTBALLOT: " + currentBallot);
+				System.out.println("CURRENTVAL: " + currentOperation);
+				System.out.println("CONFIRMLIST" + confirmList.size());
+
 				switch (message.getType()) {
 				case PREPARE:
 					PrepareMessage prepareMessage = (PrepareMessage) message;

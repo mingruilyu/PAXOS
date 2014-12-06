@@ -154,7 +154,9 @@ class Ballot implements Comparable<Ballot> {
 		this.ballotNumber = ballotNumber;
 		this.serverNumber = serverNumber;
 	}
-
+	public String toString() {
+		return "BalNo: " + ballotNumber + "SerNo: " + serverNumber;
+	}
 	@Override
 	public int compareTo(Ballot another) {
 		if (another == null) return 1;
