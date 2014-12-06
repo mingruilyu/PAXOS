@@ -112,7 +112,10 @@ public class Server {
 		case STATE_START:
 			if (message != null) {
 				System.out.println("ACCEPTCOUNT: " + acceptCount);
-				System.out.println("CURRENTBALLOT: " + currentBallot);
+				if (currentBallot != null)
+				System.out.println("CURRENTBALLOT: " + currentBallot.toString());
+				else 
+					System.out.println("CURRENTBALLOT: " + "NULL");
 				System.out.println("CURRENTVAL: " + currentOperation);
 				System.out.println("CONFIRMLIST" + confirmList.size());
 				switch (message.getType()) {
@@ -133,6 +136,7 @@ public class Server {
 				case DECIDE:
 					if(checkRedundantMessage(message)) break;
 					DecideMessage decideMessage = (DecideMessage) message;
+					currentOperation = decideMessage.getValue();
 					makeDecision(decideMessage.getValue());
 					break;
 				case PREPARE:
@@ -162,7 +166,10 @@ public class Server {
 			} else {
 				if (message != null) {
 					System.out.println("ACCEPTCOUNT: " + acceptCount);
-					System.out.println("CURRENTBALLOT: " + currentBallot);
+					if (currentBallot != null)
+					System.out.println("CURRENTBALLOT: " + currentBallot.toString());
+					else 
+						System.out.println("CURRENTBALLOT: " + "NULL");
 					System.out.println("CURRENTVAL: " + currentOperation);
 					System.out.println("CONFIRMLIST" + confirmList.size());
 
@@ -185,6 +192,7 @@ public class Server {
 						break;
 					case DECIDE:
 						DecideMessage decideMessage = (DecideMessage) message;
+						currentOperation = decideMessage.getValue();
 						makeDecision(decideMessage.getValue());
 						state = State.STATE_START;
 						break;
@@ -249,7 +257,10 @@ public class Server {
 		case STATE_CONFIRM:
 			if (message != null) {
 				System.out.println("ACCEPTCOUNT: " + acceptCount);
-				System.out.println("CURRENTBALLOT: " + currentBallot);
+				if (currentBallot != null)
+				System.out.println("CURRENTBALLOT: " + currentBallot.toString());
+				else 
+					System.out.println("CURRENTBALLOT: " + "NULL");
 				System.out.println("CURRENTVAL: " + currentOperation);
 				System.out.println("CONFIRMLIST" + confirmList.size());
 
@@ -306,7 +317,7 @@ public class Server {
 			}
 			if (message != null) {
 				System.out.println("ACCEPTCOUNT: " + acceptCount);
-				System.out.println("CURRENTBALLOT: " + currentBallot);
+				System.out.println("CURRENTBALLOT: " + currentBallot.toString());
 				System.out.println("CURRENTVAL: " + currentOperation);
 				System.out.println("CONFIRMLIST" + confirmList.size());
 
@@ -328,6 +339,7 @@ public class Server {
 					break;
 				case DECIDE:
 					DecideMessage decideMessage = (DecideMessage) message;
+					currentOperation = decideMessage.getValue();
 					makeDecision(decideMessage.getValue());
 					state = State.STATE_START;
 					break;
@@ -343,11 +355,12 @@ public class Server {
 							.getBallot()) == 0) {
 						if ((++acceptCount) >= MAJORITY) {
 							// decide on the value and broadcast decide
-							Message newDecideMessage = new DecideMessage(
+							DecideMessage newDecideMessage = new DecideMessage(
 									MessageType.DECIDE, this.serverNo,
 									Messenger.BROADCAST, currentOperation);
 							// we dont periodically send decide message
 							messenger.sendMessage(newDecideMessage);
+							currentOperation = newDecideMessage.getValue();
 							makeDecision(currentOperation);
 						}
 					}
@@ -360,7 +373,10 @@ public class Server {
 		case STATE_ACCEPTOR_ACCEPT:
 			if (message != null) {
 				System.out.println("ACCEPTCOUNT: " + acceptCount);
-				System.out.println("CURRENTBALLOT: " + currentBallot);
+				if (currentBallot != null)
+				System.out.println("CURRENTBALLOT: " + currentBallot.toString());
+				else 
+					System.out.println("CURRENTBALLOT: " + "NULL");
 				System.out.println("CURRENTVAL: " + currentOperation);
 				System.out.println("CONFIRMLIST" + confirmList.size());
 
@@ -381,6 +397,7 @@ public class Server {
 					break;
 				case DECIDE:
 					DecideMessage decideMessage = (DecideMessage) message;
+					currentOperation = decideMessage.getValue();
 					makeDecision(decideMessage.getValue());
 					state = State.STATE_START;
 					break;
@@ -394,11 +411,12 @@ public class Server {
 							.getBallot()) == 0) {
 						if ((++acceptCount) >= MAJORITY) {
 							// decide on the value and broadcast decide
-							Message newDecideMessage = new DecideMessage(
+							DecideMessage newDecideMessage = new DecideMessage(
 									MessageType.DECIDE, this.serverNo,
 									Messenger.BROADCAST, currentOperation);
 							// we dont periodically send decide message
 							messenger.sendMessage(newDecideMessage);
+							currentOperation = newDecideMessage.getValue();
 							makeDecision(currentOperation);
 						}
 					}

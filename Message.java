@@ -157,6 +157,7 @@ class Ballot implements Comparable<Ballot> {
 	public String toString() {
 		return "BalNo: " + ballotNumber + "SerNo: " + serverNumber;
 	}
+	
 	@Override
 	public int compareTo(Ballot another) {
 		if (another == null) return 1;
