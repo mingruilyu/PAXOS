@@ -67,16 +67,53 @@ public class Server {
 		log = new Log();
 		balance = log.getBalance();
 	}
-
+	public static void main(String[] args) throws IOException {
+		Server server;
+		String serverNumberString = null;
+		if (args.length == 1) {
+			serverNumberString = args[0];
+		}
+		while (true) {
+			if (serverNumberString != null) {
+				try {
+					int value = Integer.parseInt(serverNumberString);
+					server = new Server(value);
+					break;
+				} catch (NumberFormatException ex) {
+					serverNumberString = getCorrestInput();
+				}
+			} else
+				serverNumberString = getCorrestInput();
+		}
+		while (true) {
+			server.run();
+		}
+	}
+	
+	private boolean checkRedundantMessage(Message message) {
+		if (message == null) return false;
+		switch(message.getType()) {
+		case ACCEPT: 
+			AcceptMessage acceptMessage = (AcceptMessage)message;
+			return acceptMessage.getAcceptLog().getLogPosition() == log.getLogLength();
+		case DECIDE: 
+			DecideMessage decideMessage = (DecideMessage)message;
+			return decideMessage.getValue().getLogPosition() == log.getLogLength();
+		default:
+			return true;
+		}		
+	}
+	
 	public void run() throws UnknownHostException, IOException {
 		// keep the last message and command unchanged
-		if (!serverSwitch)
+		if (serverSwitch)
 			message = checkMessage();
 		switch (state) {
 		case STATE_START:
 			if (message != null) {
 				switch (message.getType()) {
 				case ACCEPT:
+					if(checkRedundantMessage(message)) break;
 					AcceptMessage acceptMessage = (AcceptMessage) message;
 					// get an new operation to agree on
 					acceptCount = 1;
@@ -90,6 +127,7 @@ public class Server {
 					state = State.STATE_ACCEPTOR_ACCEPT;
 					break;
 				case DECIDE:
+					if(checkRedundantMessage(message)) break;
 					DecideMessage decideMessage = (DecideMessage) message;
 					makeDecision(decideMessage.getValue());
 					break;
@@ -109,7 +147,7 @@ public class Server {
 			}
 			break;
 		case STATE_PREPARE:
-			if (userTimer.getTime() > TRANSACTION_TIMEOUT) {
+			if (userTimer.isOn() && userTimer.getTime() > TRANSACTION_TIMEOUT) {
 				// no accept request has been sent
 				notifyTerminal(false);
 				state = State.STATE_START;
@@ -243,7 +281,7 @@ public class Server {
 			}
 			break;
 		case STATE_PROPOSER_ACCEPT:
-			if (userTimer.getTime() > TRANSACTION_TIMEOUT) {
+			if (userTimer.isOn() && userTimer.getTime() > TRANSACTION_TIMEOUT) {
 				notifyTerminal(false);
 				synchronized (this) {
 					recvMessageList.add(0, message); // no message consume
@@ -293,7 +331,7 @@ public class Server {
 					}
 					break;
 				default:
-					System.out.println("Undefined Message!");
+					System.out.println("Redundant Message!");
 				}
 			}
 			break;
@@ -337,18 +375,19 @@ public class Server {
 							makeDecision(currentOperation);
 						}
 					}
+					break;
 				default:
 					System.out.println("Undefined Message!");
 				}
-
-				break;
 			}
+			break;
 		default:
 			System.out.println("Undefined State!");
 		}
 		if ((nextOperation = checkCommand()) != null) {
 			state = State.STATE_PREPARE;
 			startProposal(nextOperation);
+			terminal.command = null;
 			nextOperation = null;
 		}
 	}
@@ -388,6 +427,8 @@ public class Server {
 	private void notifyTerminal(boolean success) {
 		String indicator = success ? "SUCCEED" : "FAIL";
 		userTimer.turnOff();
+		currentBallot = null;
+		currentOperation = null;
 		System.out
 				.println("The Last Operation " + currentOperation + indicator);
 	}
@@ -423,28 +464,7 @@ public class Server {
 					serverNo);
 	}
 
-	public static void main(String[] args) throws IOException {
-		Server server;
-		String serverNumberString = null;
-		if (args.length == 1) {
-			serverNumberString = args[0];
-		}
-		while (true) {
-			if (serverNumberString != null) {
-				try {
-					int value = Integer.parseInt(serverNumberString);
-					server = new Server(value);
-					break;
-				} catch (NumberFormatException ex) {
-					serverNumberString = getCorrestInput();
-				}
-			} else
-				serverNumberString = getCorrestInput();
-		}
-		while (true) {
-			server.run();
-		}
-	}
+	
 
 	private static String getCorrestInput() {
 		System.out.println("Please enter the server number:");
@@ -463,9 +483,9 @@ public class Server {
 
 	private void makeDecision(LogEntry operation) {
 		log.appendLogEntry(operation);
+		notifyTerminal(true);
 		currentBallot = null;
 		currentOperation = null;
-		notifyTerminal(true);
 		confirmList.clear();
 		acceptCount = 0;
 		state = State.STATE_START;

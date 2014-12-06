@@ -9,6 +9,15 @@ public class LogEntry implements Comparable<LogEntry>{
 		this.operand = operand;
 		this.logPosition = position;
 	}
+	public String getOperation() {
+		return operation;
+	}
+	public double getOperand() {
+		return operand;
+	}
+	public int getLogPosition() {
+		return logPosition;
+	}
 	public String toString() {
 		return operation + "\t" + operand + "in LogPosition " + logPosition;
 	}
