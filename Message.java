@@ -63,14 +63,10 @@ abstract class Message {
 	public static Message parseMessage(String messageString) {
 		String[] headerParts = messageString.split(
 				String.valueOf(Message.DELIMIT), 5);
-		int newCount = Integer.parseInt(headerParts[0]);
-		if (newCount > globalmessageCount) globalmessageCount = newCount;
 		int sender = Integer.parseInt(headerParts[1]);
 		int receiver = Integer.parseInt(headerParts[2]);
 		String[] bodyParts = headerParts[4].split(String
 				.valueOf(Message.DELIMIT));
-		System.out.print("No. : " + globalmessageCount + "\t");
-		System.out.println(messageString);
 		switch (headerParts[3]) {
 		case "PREPARE":
 			int ballotNumber = Integer.parseInt(bodyParts[0]);
@@ -200,8 +196,6 @@ class AcceptMessage extends Message {
 		message.append(String.valueOf(acceptLog.operand) + DELIMIT);
 		message.append(String.valueOf(acceptLog.logPosition) + DELIMIT);
 		message.append(String.valueOf(MSG_END));
-		System.out.print("No. : " + globalmessageCount + "\t");
-		System.out.println(message.toString());
 		return message.toString();
 	}
 
@@ -237,8 +231,6 @@ class DecideMessage extends Message {
 		message.append(String.valueOf(value.operand) + DELIMIT);
 		message.append(String.valueOf(value.logPosition) + DELIMIT);
 		message.append(String.valueOf(MSG_END));
-		System.out.print("No. : " + globalmessageCount + "\t");
-		System.out.println(message.toString());
 		return message.toString();
 	}
 }
@@ -264,8 +256,6 @@ class PrepareMessage extends Message {
 		message.append(String.valueOf(ballot.ballotNumber) + DELIMIT);
 		message.append(String.valueOf(ballot.serverNumber) + DELIMIT);
 		message.append(String.valueOf(MSG_END));
-		System.out.print("No. : " + globalmessageCount + "\t");
-		System.out.println(message.toString());
 		return message.toString();
 	}
 }
@@ -326,8 +316,6 @@ class ConfirmMessage extends Message {
 			message.append(String.valueOf(value.logPosition) + DELIMIT);
 		}
 		message.append(String.valueOf(MSG_END));
-		System.out.print("No. : " + globalmessageCount + "\t");
-		System.out.println(message.toString());
 		return message.toString();
 	}
 }

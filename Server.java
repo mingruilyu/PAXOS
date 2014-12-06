@@ -108,9 +108,11 @@ public class Server {
 		// keep the last message and command unchanged
 		if (serverSwitch)
 			message = checkMessage();
+		System.out.println("STATE: " + state);
 		switch (state) {
 		case STATE_START:
 			if (message != null) {
+				System.out.println("MESSAGE: " + message.translate());
 				System.out.println("ACCEPTCOUNT: " + acceptCount);
 				if (currentBallot != null)
 				System.out.println("CURRENTBALLOT: " + currentBallot.toString());
@@ -165,6 +167,7 @@ public class Server {
 				break;
 			} else {
 				if (message != null) {
+					System.out.println("MESSAGE: " + message.translate());
 					System.out.println("ACCEPTCOUNT: " + acceptCount);
 					if (currentBallot != null)
 					System.out.println("CURRENTBALLOT: " + currentBallot.toString());
@@ -256,6 +259,7 @@ public class Server {
 			break;
 		case STATE_CONFIRM:
 			if (message != null) {
+				System.out.println("MESSAGE: " + message.translate());
 				System.out.println("ACCEPTCOUNT: " + acceptCount);
 				if (currentBallot != null)
 				System.out.println("CURRENTBALLOT: " + currentBallot.toString());
@@ -316,6 +320,7 @@ public class Server {
 				break;
 			}
 			if (message != null) {
+				System.out.println("MESSAGE: " + message.translate());
 				System.out.println("ACCEPTCOUNT: " + acceptCount);
 				System.out.println("CURRENTBALLOT: " + currentBallot.toString());
 				System.out.println("CURRENTVAL: " + currentOperation);
@@ -372,6 +377,7 @@ public class Server {
 			break;
 		case STATE_ACCEPTOR_ACCEPT:
 			if (message != null) {
+				System.out.println("MESSAGE: " + message.translate());
 				System.out.println("ACCEPTCOUNT: " + acceptCount);
 				if (currentBallot != null)
 				System.out.println("CURRENTBALLOT: " + currentBallot.toString());
