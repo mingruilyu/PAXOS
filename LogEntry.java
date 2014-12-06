@@ -9,9 +9,12 @@ public class LogEntry implements Comparable<LogEntry>{
 		this.operand = operand;
 		this.logPosition = position;
 	}
-
+	public String toString() {
+		return operation + "\t" + operand + "in LogPosition " + logPosition;
+	}
 	@Override
 	public int compareTo(LogEntry log) {
+		if (log == null) return 1;
 		if(log.operation.equals(this.operation) && log.operand ==this.operand && log.logPosition==this.logPosition)
 			return 0;
 		return -1;

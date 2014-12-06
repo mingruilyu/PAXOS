@@ -4,23 +4,23 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.UnknownHostException;
-import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.Set;
-import java.util.Timer;
-import java.util.concurrent.Semaphore;
 
 public class Server {
 	final static int TOTAL_SERVER = 3;
 	final static int MAJORITY = TOTAL_SERVER / 2 + 1;
-	final static long WAIT_TIMEOUT = 1000;
-	final static long TRANSACTION_TIMEOUT = 5000;
+	final static long TRANSACTION_TIMEOUT = 1000 * 480;
+	State state;
+
+	enum State {
+		STATE_START, STATE_TIMEOUT, STATE_CONFIRM, STATE_PREPARE, STATE_PROPOSER_ACCEPT, STATE_DECIDE, STATE_ACCEPTOR_ACCEPT
+	}
+
 	Log log;
 	int serverNo;
 	LogEntry currentOperation;
 	Ballot currentBallot;
-	LogEntry decidedOperation;
 	boolean syncFlag;
 	ServerTimer userTimer;
 
@@ -30,7 +30,6 @@ public class Server {
 
 	Messenger messenger;
 	Terminal terminal;
-	ServerTimer waitTimer;
 
 	List<ConfirmMessage> confirmList;
 	int acceptCount;
@@ -38,16 +37,16 @@ public class Server {
 	boolean serverSwitch;
 	String command;
 	Dispatcher dispatcher;
-	boolean isProposer;
-	boolean prepareRequestFlag;
+
+	Message message = null;
+	LogEntry nextOperation = null;
+
 	public Server(int serverNo) throws IOException {
 		this.serverNo = serverNo;
-		isProposer = false;
-		prepareRequestFlag = false;
+		state = State.STATE_START;
 		serverSwitch = true;
 		currentOperation = null;
 		currentBallot = null;
-		waitTimer = new ServerTimer();
 		userTimer = new ServerTimer();
 		// initialize messagelist, confirmlist
 		command = null;
@@ -70,174 +69,342 @@ public class Server {
 	}
 
 	public void run() throws UnknownHostException, IOException {
-		Message message = null;
-		Message reply = null;
-		synchronized (this) {
-			if (!recvMessageList.isEmpty())
-				message = recvMessageList.remove(0);
-		}
-
-		synchronized (this) {
-			command = terminal.getCommand();
-		}
-		if (syncFlag && message == null && command == null)
-			return;
-		if (command != null)
-			interpret(command);
-		if (message != null && serverSwitch) {
-			switch (message.getType()) {
-			case ACCEPT:
-				if (userTimer.getTime() > TRANSACTION_TIMEOUT && isProposer) {
-					notifyTerminal(false);
-					acceptCount = 0;
-					break;
-				}
-				AcceptMessage acceptMessage = (AcceptMessage) message;
-				if (acceptMessage.getBallot().compareTo(currentBallot) < 0)
-					// if the message contains a ballot less than the current
-					// ballot, no respond
-					break;
-				else if (acceptMessage.getBallot().compareTo(currentBallot) == 0
-						&& acceptMessage.getAcceptLog().compareTo(
-								currentOperation) == 0) {
-					// get an support from the other server
-					if ((++acceptCount) >= MAJORITY) {
-						// decide on the value and broadcast decide
-						makeDecision(currentOperation);
-						Message decideMessage = new DecideMessage(
-								MessageType.DECIDE, this.serverNo,
-								Messenger.BROADCAST, currentOperation);
-						// we dont periodically send decide message
-						acceptCount = 0;
-						messenger.sendMessage(decideMessage);
-					}
-				} else {
-					// ballot number equal but operation unequal is not possible
-					if (acceptMessage.getAcceptLog()
-							.compareTo(currentOperation) != 0 && isProposer)
-						notifyTerminal(false);
+		// keep the last message and command unchanged
+		if (!serverSwitch)
+			message = checkMessage();
+		switch (state) {
+		case STATE_START:
+			if (message != null) {
+				switch (message.getType()) {
+				case ACCEPT:
+					AcceptMessage acceptMessage = (AcceptMessage) message;
 					// get an new operation to agree on
 					acceptCount = 1;
 					currentBallot = acceptMessage.getBallot();
 					currentOperation = acceptMessage.getAcceptLog();
 					// forward the message
 					acceptMessage.setReceiver(Messenger.BROADCAST);
+					acceptMessage.setSender(serverNo);
 					messenger.sendMessage(acceptMessage);
-				}
-
-				break;
-			case PREPARE:
-				PrepareMessage prepareMessage = (PrepareMessage) message;
-				if (currentBallot == null) {
-					// this server is not proposer
-					currentBallot = prepareMessage.getBallot();
-					reply = new ConfirmMessage(MessageType.CONFIRM, serverNo,
-							message.getSender(), prepareMessage.getBallot(),
-							null, null);
-				} else {
-					if (currentBallot.compareTo(prepareMessage.getBallot()) < 0) {
-						reply = new ConfirmMessage(MessageType.CONFIRM,
-								serverNo, message.getSender(),
-								prepareMessage.getBallot(), currentBallot,
-								currentOperation);
-					}
-				}
-				messenger.sendMessage(reply);
-				break;
-			case SYNC_REQ:
-				SyncReqMessage syncReqMessage = (SyncReqMessage) message;
-				List<LogEntry> complement = log.compareLog(syncReqMessage
-						.getLogLength());
-				reply = new SyncAckMessage(MessageType.SYNC_ACK, serverNo,
-						syncReqMessage.getSender(), complement);
-				break;
-			case SYNC_ACK:
-				SyncAckMessage syncAckMessage = (SyncAckMessage) message;
-				if (!syncFlag) {
-					log.synchronizeLogLists(syncAckMessage.getRecentLog());
-					syncFlag = true;
-				}
-				break;
-			case CONFIRM:
-				// it get this message because it start a proposal
-				ConfirmMessage confirmMessage = (ConfirmMessage) message;
-				synchronized (this) {
-					confirmList.add(confirmMessage);
-					if (confirmList.size() != TOTAL_SERVER
-							&& waitTimer.getTime() < WAIT_TIMEOUT)
-						break;
-				}
-				// check how many confirm Message that has ballot that is the
-				// same as the currentBallot
-				Ballot recvMaxBallot = null;
-				LogEntry maxBallotValue = null;
-				for (int i = 0; i < confirmList.size(); i++) {
-					ConfirmMessage recvConfirm = confirmList.get(i);
-					if (recvMaxBallot == null
-							|| recvMaxBallot.compareTo(recvConfirm
-									.getAcceptBallot()) > 0) {
-						maxBallotValue = recvConfirm.getValue();
-						recvMaxBallot = recvConfirm.getAcceptBallot();
-					}
-				}
-				if (confirmList.size() >= MAJORITY) {
-					prepareRequestFlag = true;
-					Message acceptRequest;
-					confirmList.clear();
-					if (maxBallotValue == null) {
-						// broadcast accept request with currentOperation
-						acceptRequest = new AcceptMessage(MessageType.ACCEPT,
-								serverNo, Messenger.BROADCAST, currentBallot,
-								currentOperation);
-					} else {
-						// broadcast accept with recvMaxBallot
-						acceptRequest = new AcceptMessage(MessageType.ACCEPT,
-								serverNo, Messenger.BROADCAST, currentBallot,
-								maxBallotValue);
-					}
-					messenger.sendMessage(acceptRequest);
-				} 
-				else if (!prepareRequestFlag){
-					// return failure
-					notifyTerminal(false);
-				}
-				break;
-			case DECIDE:
-				DecideMessage decideMessage = (DecideMessage) message;
-				// two reception of decision on the same operation is not
-				// possible
-				if (decideMessage.getValue().compareTo(decidedOperation) != 0) {
-					if (currentOperation.compareTo(decideMessage.getValue()) == 0
-							&& isProposer) {
-						notifyTerminal(true);
-					}
+					acceptCount = 1;
+					state = State.STATE_ACCEPTOR_ACCEPT;
+					break;
+				case DECIDE:
+					DecideMessage decideMessage = (DecideMessage) message;
 					makeDecision(decideMessage.getValue());
+					break;
+				case PREPARE:
+					PrepareMessage prepareMessage = (PrepareMessage) message;
+					currentBallot = prepareMessage.getBallot();
+					Message reply = new ConfirmMessage(MessageType.CONFIRM,
+							serverNo, message.getSender(),
+							prepareMessage.getBallot(), null, null);
+					messenger.sendMessage(reply);
+					acceptCount = 0;
+					state = State.STATE_CONFIRM;
+					break;
+				default:
+					System.out.println("Undefined State!");
+				}
+			}
+			break;
+		case STATE_PREPARE:
+			if (userTimer.getTime() > TRANSACTION_TIMEOUT) {
+				// no accept request has been sent
+				notifyTerminal(false);
+				state = State.STATE_START;
+				synchronized (this) {
+					recvMessageList.add(0, message); // no message consume
+				}
+				break;
+			} else {
+				if (message != null) {
+					switch (message.getType()) {
+					case PREPARE:
+						PrepareMessage prepareMessage = (PrepareMessage) message;
+						if (prepareMessage.getBallot().compareTo(currentBallot) > 0) {
+							notifyTerminal(false);
+							Message reply = new ConfirmMessage(
+									MessageType.CONFIRM, serverNo,
+									message.getSender(),
+									prepareMessage.getBallot(), currentBallot,
+									currentOperation);
+							currentBallot = prepareMessage.getBallot();
+							messenger.sendMessage(reply);
+							acceptCount = 0;
+							state = State.STATE_CONFIRM;
+						}
+						break;
+					case DECIDE:
+						DecideMessage decideMessage = (DecideMessage) message;
+						makeDecision(decideMessage.getValue());
+						state = State.STATE_START;
+						break;
+					case CONFIRM: // it get this message because it started a
+									// proposal
+						ConfirmMessage confirmMessage = (ConfirmMessage) message;
+						synchronized (this) {
+							confirmList.add(confirmMessage);
+						}
+						// check how many confirm Message that has ballot that
+						// is the
+						// same as the currentBallot
+						if (confirmList.size() < MAJORITY)
+							break;
+						LogEntry maxBallotOperation = selectOperation();
+						Message acceptRequest;
+						if (maxBallotOperation == null) {
+							// broadcast accept request with currentOperation
+							acceptRequest = new AcceptMessage(
+									MessageType.ACCEPT, serverNo,
+									Messenger.BROADCAST, currentBallot,
+									currentOperation);
+							acceptCount = 1;
+							state = State.STATE_PROPOSER_ACCEPT;
+						} else {
+							// help with propagation of the other proposal
+							acceptRequest = new AcceptMessage(
+									MessageType.ACCEPT, serverNo,
+									Messenger.BROADCAST, currentBallot,
+									maxBallotOperation);
+							notifyTerminal(false);
+							acceptCount = 1;
+							state = State.STATE_ACCEPTOR_ACCEPT;
+						}
+						messenger.sendMessage(acceptRequest);
+						break;
+					case ACCEPT:
+						AcceptMessage acceptMessage = (AcceptMessage) message;
+						if (acceptMessage.getBallot().compareTo(currentBallot) < 0)
+							// if the message contains a ballot less than the
+							// current
+							// ballot, no response
+							break;
+						else {
+							notifyTerminal(false);
+							// get an new operation to agree on
+							currentBallot = acceptMessage.getBallot();
+							currentOperation = acceptMessage.getAcceptLog();
+							// forward the message
+							acceptMessage.setReceiver(Messenger.BROADCAST);
+							acceptMessage.setSender(serverNo);
+							messenger.sendMessage(acceptMessage);
+							acceptCount = 1;
+							state = State.STATE_ACCEPTOR_ACCEPT;
+						}
+					default:
+						System.out.println("Undefined Message!");
+					}
+				}
+			}
+			break;
+		case STATE_CONFIRM:
+			if (message != null) {
+				switch (message.getType()) {
+				case DECIDE:
+					DecideMessage decideMessage = (DecideMessage) message;
+					makeDecision(decideMessage.getValue());
+					break;
+				case ACCEPT:
+					AcceptMessage acceptMessage = (AcceptMessage) message;
+					if (acceptMessage.getBallot().compareTo(currentBallot) < 0)
+						// if the message contains a ballot less than the
+						// current
+						// ballot, no respond
+						break;
+					else {
+						// get an new operation to agree on
+						currentBallot = acceptMessage.getBallot();
+						currentOperation = acceptMessage.getAcceptLog();
+						// forward the message
+						acceptMessage.setReceiver(Messenger.BROADCAST);
+						acceptMessage.setSender(serverNo);
+						messenger.sendMessage(acceptMessage);
+						acceptCount = 1;
+						confirmList.clear();
+						state = State.STATE_ACCEPTOR_ACCEPT;
+					}
+					break;
+				case PREPARE:
+					PrepareMessage prepareMessage = (PrepareMessage) message;
+					if (currentBallot.compareTo(prepareMessage.getBallot()) < 0) {
+						currentBallot = prepareMessage.getBallot();
+						Message reply = new ConfirmMessage(MessageType.CONFIRM,
+								serverNo, message.getSender(),
+								prepareMessage.getBallot(), null, null);
+						messenger.sendMessage(reply);
+					}
+					confirmList.clear();
+					// state wont change
+					break;
+				default:
+					System.out.println("Undefined Message!");
+				}
+			}
+			break;
+		case STATE_PROPOSER_ACCEPT:
+			if (userTimer.getTime() > TRANSACTION_TIMEOUT) {
+				notifyTerminal(false);
+				synchronized (this) {
+					recvMessageList.add(0, message); // no message consume
 				}
 				break;
 			}
+			if (message != null) {
+				switch (message.getType()) {
+				case PREPARE:
+					PrepareMessage prepareMessage = (PrepareMessage) message;
+
+					if (currentBallot.compareTo(prepareMessage.getBallot()) < 0) {
+						notifyTerminal(false);
+						currentBallot = prepareMessage.getBallot();
+						Message reply = new ConfirmMessage(MessageType.CONFIRM,
+								serverNo, message.getSender(),
+								prepareMessage.getBallot(), null, null);
+						acceptCount = 0;
+						messenger.sendMessage(reply);
+						state = State.STATE_CONFIRM;
+					}
+					break;
+				case DECIDE:
+					DecideMessage decideMessage = (DecideMessage) message;
+					makeDecision(decideMessage.getValue());
+					state = State.STATE_START;
+					break;
+				case ACCEPT:
+					AcceptMessage acceptMessage = (AcceptMessage) message;
+					if (currentBallot.compareTo(acceptMessage.getBallot()) < 0) {
+						notifyTerminal(false);
+						acceptCount = 1;
+						state = State.STATE_ACCEPTOR_ACCEPT;
+						currentBallot = acceptMessage.getBallot();
+						currentOperation = acceptMessage.getAcceptLog();
+					} else if (currentBallot.compareTo(acceptMessage
+							.getBallot()) == 0) {
+						if ((++acceptCount) >= MAJORITY) {
+							// decide on the value and broadcast decide
+							Message newDecideMessage = new DecideMessage(
+									MessageType.DECIDE, this.serverNo,
+									Messenger.BROADCAST, currentOperation);
+							// we dont periodically send decide message
+							messenger.sendMessage(newDecideMessage);
+							makeDecision(currentOperation);
+						}
+					}
+					break;
+				default:
+					System.out.println("Undefined Message!");
+				}
+			}
+			break;
+		case STATE_ACCEPTOR_ACCEPT:
+			if (message != null) {
+				switch (message.getType()) {
+				case PREPARE:
+					PrepareMessage prepareMessage = (PrepareMessage) message;
+					if (currentBallot.compareTo(prepareMessage.getBallot()) < 0) {
+
+						Message reply = new ConfirmMessage(MessageType.CONFIRM,
+								serverNo, message.getSender(),
+								prepareMessage.getBallot(), currentBallot,
+								currentOperation);
+						currentBallot = prepareMessage.getBallot();
+						acceptCount = 0;
+						messenger.sendMessage(reply);
+						state = State.STATE_CONFIRM;
+					}
+					break;
+				case DECIDE:
+					DecideMessage decideMessage = (DecideMessage) message;
+					makeDecision(decideMessage.getValue());
+					state = State.STATE_START;
+					break;
+				case ACCEPT:
+					AcceptMessage acceptMessage = (AcceptMessage) message;
+					if (currentBallot.compareTo(acceptMessage.getBallot()) < 0) {
+						acceptCount = 1;
+						currentBallot = acceptMessage.getBallot();
+						currentOperation = acceptMessage.getAcceptLog();
+					} else if (currentBallot.compareTo(acceptMessage
+							.getBallot()) == 0) {
+						if ((++acceptCount) >= MAJORITY) {
+							// decide on the value and broadcast decide
+							Message newDecideMessage = new DecideMessage(
+									MessageType.DECIDE, this.serverNo,
+									Messenger.BROADCAST, currentOperation);
+							// we dont periodically send decide message
+							messenger.sendMessage(newDecideMessage);
+							makeDecision(currentOperation);
+						}
+					}
+				default:
+					System.out.println("Undefined Message!");
+				}
+
+				break;
+			}
+		default:
+			System.out.println("Undefined State!");
+		}
+		if ((nextOperation = checkCommand()) != null) {
+			state = State.STATE_PREPARE;
+			startProposal(nextOperation);
+			nextOperation = null;
 		}
 	}
 
+	private LogEntry selectOperation() {
+		Ballot recvMaxBallot = null;
+		LogEntry maxBallotValue = null;
+		for (int i = 0; i < confirmList.size(); i++) {
+			ConfirmMessage recvConfirm = confirmList.get(i);
+			if (recvMaxBallot == null
+					|| recvMaxBallot.compareTo(recvConfirm.getAcceptBallot()) > 0) {
+				maxBallotValue = recvConfirm.getValue();
+				recvMaxBallot = recvConfirm.getAcceptBallot();
+			}
+		}
+		return maxBallotValue;
+	}
+
+	private LogEntry checkCommand() throws UnknownHostException, IOException {
+		synchronized (this) {
+			command = terminal.getCommand();
+		}
+		if (command != null)
+			return interpret(command);
+		return null;
+	}
+
+	private Message checkMessage() {
+		Message message = null;
+		synchronized (this) {
+			if (!recvMessageList.isEmpty())
+				message = recvMessageList.remove(0);
+		}
+		return message;
+	}
+
 	private void notifyTerminal(boolean success) {
-		isProposer = false;
-		prepareRequestFlag = false;
 		String indicator = success ? "SUCCEED" : "FAIL";
+		userTimer.turnOff();
 		System.out
 				.println("The Last Operation " + currentOperation + indicator);
 	}
 
-	public void startProposal() throws UnknownHostException, IOException {
+	public void startProposal(LogEntry nextOperation)
+			throws UnknownHostException, IOException {
 		if (!syncFlag)
 			return;
+		state = State.STATE_PREPARE;
 		updateBallot();
-		isProposer = true;
+		currentOperation = nextOperation;
 		Message newProposal = new PrepareMessage(MessageType.PREPARE, serverNo,
 				Messenger.BROADCAST, currentBallot);
 		confirmList.clear();
 		confirmList.add(new ConfirmMessage(MessageType.CONFIRM, serverNo,
 				this.serverNo, this.currentBallot, null, null));
-		waitTimer.resetTimer();
-		acceptCount = 1;
+		acceptCount = 0;
 		messenger.sendMessage(newProposal);
 	}
 
@@ -275,7 +442,6 @@ public class Server {
 				serverNumberString = getCorrestInput();
 		}
 		while (true) {
-
 			server.run();
 		}
 	}
@@ -299,17 +465,19 @@ public class Server {
 		log.appendLogEntry(operation);
 		currentBallot = null;
 		currentOperation = null;
-		System.out.println(operation);
-		waitTimer.resetTimer();
+		notifyTerminal(true);
 		confirmList.clear();
-		decidedOperation = operation;
+		acceptCount = 0;
+		state = State.STATE_START;
 	}
 
-	public void interpret(String s) throws UnknownHostException, IOException {
+	public LogEntry interpret(String s) throws UnknownHostException,
+			IOException {
 		if (s == null || s.length() == 0)
-			return;
+			return null;
 		String command = s.trim().toLowerCase();
 		char firstChar = command.charAt(0);
+		userTimer.turnOn();
 		userTimer.resetTimer();
 		switch (firstChar) {
 		case 'd':
@@ -326,7 +494,8 @@ public class Server {
 					if (!syncFlag)
 						System.out.println("Unsynchronized!");
 					else {
-						startProposal();
+						return currentOperation;
+						// startProposal();
 					}
 				} catch (NumberFormatException ex) {
 					handleInvalidInput();
@@ -349,7 +518,8 @@ public class Server {
 					if (!syncFlag)
 						System.out.println("Unsynchronized!");
 					else {
-						startProposal();
+						return currentOperation;
+						// startProposal();
 					}
 				} catch (NumberFormatException ex) {
 					handleInvalidInput();
@@ -393,11 +563,11 @@ public class Server {
 		}
 		command = null;
 		terminal.command = null;
+		return null;
 	}
 
 	public void handleInvalidInput() {
 		// ?? handle invalid input
 		System.out.println("invalid input");
 	}
-
 }

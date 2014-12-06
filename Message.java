@@ -187,7 +187,7 @@ class AcceptMessage extends Message {
 		message.append(super.translate());
 		message.append(String.valueOf(ballot.ballotNumber) + DELIMIT);
 		message.append(String.valueOf(ballot.serverNumber) + DELIMIT);
-		message.append(String.valueOf(acceptLog.operation) + DELIMIT);
+		message.append(acceptLog.operation + DELIMIT);
 		message.append(String.valueOf(acceptLog.operand) + DELIMIT);
 		message.append(String.valueOf(acceptLog.logPosition) + DELIMIT);
 		message.append(String.valueOf(MSG_END));
@@ -222,7 +222,7 @@ class DecideMessage extends Message {
 	public String translate() {
 		StringBuilder message = new StringBuilder();
 		message.append(super.translate());
-		message.append(String.valueOf(value.operation) + DELIMIT);
+		message.append(value.operation + DELIMIT);
 		message.append(String.valueOf(value.operand) + DELIMIT);
 		message.append(String.valueOf(value.logPosition) + DELIMIT);
 		message.append(String.valueOf(MSG_END));
@@ -306,7 +306,7 @@ class ConfirmMessage extends Message {
 			message.append("NULL" + DELIMIT);
 		}
 		else {
-			message.append(String.valueOf(value.operation) + DELIMIT);
+			message.append(value.operation + DELIMIT);
 			message.append(String.valueOf(value.operand) + DELIMIT);
 			message.append(String.valueOf(value.logPosition) + DELIMIT);
 		}
@@ -360,7 +360,7 @@ class SyncAckMessage extends Message {
 	public String translate() {
 		StringBuilder message = new StringBuilder(super.translate());
 		for (int i = 0; i < recentLog.size(); i++) {
-			message.append(String.valueOf(recentLog.get(i).operation) + DELIMIT);
+			message.append(recentLog.get(i).operation + DELIMIT);
 			message.append(String.valueOf(recentLog.get(i).operand) + DELIMIT);
 			message.append(String.valueOf(recentLog.get(i).logPosition) + DELIMIT);
 		}
