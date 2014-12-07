@@ -27,6 +27,7 @@ public class Server {
 	ServerTimer userTimer;
 	Boolean notifycation;
 	double balance;
+	int sequenceNo;
 
 	boolean mode; // ISPAXOS or not
 
@@ -44,6 +45,7 @@ public class Server {
 	LogEntry nextOperation = null;
 
 	public Server(int serverNo) throws IOException {
+		sequenceNo =0;
 		this.serverNo = serverNo;
 		state = State.STATE_START;
 		lock = new Boolean(true);
@@ -604,7 +606,7 @@ public class Server {
 					double value = Double.parseDouble(valueString);
 					// start proposal with currentBallot and currentOperation
 					currentOperation = new LogEntry("deposit", value,
-							log.getLogPosition());
+							log.getLogPosition(),serverNo,sequenceNo++);
 					if (!syncFlag)
 						System.out.println("Unsynchronized!");
 					else {
@@ -628,7 +630,7 @@ public class Server {
 					double value = Double.parseDouble(valueString);
 					// start proposal with currentBallot and currentOperation
 					currentOperation = new LogEntry("deposit", value,
-							log.getLogPosition());
+							log.getLogPosition(),serverNo,sequenceNo++);
 					if (!syncFlag)
 						System.out.println("Unsynchronized!");
 					else {

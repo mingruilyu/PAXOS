@@ -19,7 +19,7 @@ public class Log {
 		load();
 	}
 	public int getLogPosition() {
-		return logs.size()+1;
+		return logs.size();
 	}
 	
 	private void load() {
