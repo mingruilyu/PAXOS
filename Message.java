@@ -1,6 +1,5 @@
 package server;
 
-
 import java.util.Comparator;
 import java.util.LinkedList;
 import java.util.List;
@@ -23,7 +22,7 @@ abstract class Message {
 	int receiver;
 	MessageType type;
 	static int globalmessageCount = 0;
-	
+
 	public MessageType getType() {
 		return type;
 	}
@@ -52,7 +51,7 @@ abstract class Message {
 
 	public String translate() {
 		StringBuilder header = new StringBuilder();
-		header.append(String.valueOf(globalmessageCount ++) + DELIMIT);
+		header.append(String.valueOf(globalmessageCount++) + DELIMIT);
 		header.append(String.valueOf(sender) + DELIMIT);
 		header.append(String.valueOf(receiver) + DELIMIT);
 		header.append(type);
@@ -87,26 +86,38 @@ abstract class Message {
 				int acceptBallotNumber = Integer.parseInt(bodyParts[2]);
 				int acceptServerNumber = Integer.parseInt(bodyParts[3]);
 				acceptBallot = new Ballot(acceptBallotNumber,
-										acceptServerNumber);
+						acceptServerNumber);
 			}
-			if (!bodyParts[4].equals("NULL") && !bodyParts[5].equals("NULL") && !bodyParts[6].equals("NULL"))
+			if (!bodyParts[4].equals("NULL") && !bodyParts[5].equals("NULL")
+					&& !bodyParts[6].equals("NULL")
+					&& !bodyParts[7].equals("NULL")
+					&& !bodyParts[8].equals("NULL"))
 				log = new LogEntry(bodyParts[4],
-						Double.parseDouble(bodyParts[5]), 
-						Integer.parseInt(bodyParts[6]));
+						Double.parseDouble(bodyParts[5]),
+						Integer.parseInt(bodyParts[6]),
+						Integer.parseInt(bodyParts[7]),
+						Integer.parseInt(bodyParts[8]));
+
 			return new ConfirmMessage(MessageType.CONFIRM, sender, receiver,
-					 recvBallot, acceptBallot, log);
+					recvBallot, acceptBallot, log);
 
 		case "ACCEPT":
 			Ballot acceptedBallot = new Ballot(Integer.parseInt(bodyParts[0]),
 					Integer.parseInt(bodyParts[1]));
 			LogEntry acceptLog = new LogEntry(bodyParts[2],
-					Double.parseDouble(bodyParts[3]), Integer.parseInt(bodyParts[4]));
+					Double.parseDouble(bodyParts[3]),
+					Integer.parseInt(bodyParts[4]),
+					Integer.parseInt(bodyParts[5]),
+					Integer.parseInt(bodyParts[6]));
 			return new AcceptMessage(MessageType.ACCEPT, sender, receiver,
 					acceptedBallot, acceptLog);
 
-		case "DECIDE":			
+		case "DECIDE":
 			LogEntry decideLog = new LogEntry(bodyParts[0],
-					Double.parseDouble(bodyParts[1]), Integer.parseInt(bodyParts[2]));
+					Double.parseDouble(bodyParts[1]),
+					Integer.parseInt(bodyParts[2]),
+					Integer.parseInt(bodyParts[3]),
+					Integer.parseInt(bodyParts[4]));
 			return new DecideMessage(MessageType.DECIDE, sender, receiver,
 					decideLog);
 		case "SYNC_REQ":
@@ -115,9 +126,10 @@ abstract class Message {
 					logLength);
 		case "SYNC_ACK":
 			List<LogEntry> logs = new LinkedList<LogEntry>();
-			for (int i = 0; i < bodyParts.length; i = i + 2) {
+			for (int i = 0; i < bodyParts.length; i = i + 5) {
 				LogEntry logEntry = new LogEntry(bodyParts[i],
-						Double.parseDouble(bodyParts[i + 1]), Integer.parseInt(bodyParts[i + 2]));
+						Double.parseDouble(bodyParts[i + 1]),
+						Integer.parseInt(bodyParts[i + 2]),Integer.parseInt(bodyParts[i + 3]),Integer.parseInt(bodyParts[i + 4]));
 				logs.add(logEntry);
 			}
 			return new SyncAckMessage(MessageType.SYNC_ACK, sender, receiver,
@@ -129,17 +141,20 @@ abstract class Message {
 
 }
 
-
 class BallotComparator implements Comparator<Ballot> {
 
 	@Override
 	public int compare(Ballot bal1, Ballot bal2) {
-		if (bal1 == null && bal2 == null) return 0;
-		else if (bal1 == null) return -1;
-		else if (bal2 == null) return -1;
-		else return bal1.compareTo(bal2);
+		if (bal1 == null && bal2 == null)
+			return 0;
+		else if (bal1 == null)
+			return -1;
+		else if (bal2 == null)
+			return -1;
+		else
+			return bal1.compareTo(bal2);
 	}
-	
+
 }
 
 class Ballot implements Comparable<Ballot> {
@@ -150,13 +165,15 @@ class Ballot implements Comparable<Ballot> {
 		this.ballotNumber = ballotNumber;
 		this.serverNumber = serverNumber;
 	}
+
 	public String toString() {
 		return "BalNo: " + ballotNumber + "SerNo: " + serverNumber;
 	}
-	
+
 	@Override
 	public int compareTo(Ballot another) {
-		if (another == null) return 1;
+		if (another == null)
+			return 1;
 		if (this.ballotNumber != another.ballotNumber)
 			return this.ballotNumber - another.ballotNumber;
 		else
@@ -195,6 +212,8 @@ class AcceptMessage extends Message {
 		message.append(acceptLog.operation + DELIMIT);
 		message.append(String.valueOf(acceptLog.operand) + DELIMIT);
 		message.append(String.valueOf(acceptLog.logPosition) + DELIMIT);
+		message.append(String.valueOf(acceptLog.serverNo) + DELIMIT);
+		message.append(String.valueOf(acceptLog.sequenceNo) + DELIMIT);
 		message.append(String.valueOf(MSG_END));
 		return message.toString();
 	}
@@ -210,17 +229,17 @@ class AcceptMessage extends Message {
 
 class DecideMessage extends Message {
 	/*
-	 * BODY Field Content 
-	 * LOG_POS operation
-	 * LOG_BAL log ballot
+	 * BODY Field Content LOG_POS operation LOG_BAL log ballot
 	 */
 	LogEntry value;
+
 	public LogEntry getValue() {
 		return value;
 	}
+
 	public DecideMessage(MessageType type, int sender, int receiver,
 			LogEntry value) {
-		super(type, receiver,sender);
+		super(type, receiver, sender);
 		this.value = value;
 	}
 
@@ -230,6 +249,8 @@ class DecideMessage extends Message {
 		message.append(value.operation + DELIMIT);
 		message.append(String.valueOf(value.operand) + DELIMIT);
 		message.append(String.valueOf(value.logPosition) + DELIMIT);
+		message.append(String.valueOf(value.serverNo) + DELIMIT);
+		message.append(String.valueOf(value.sequenceNo) + DELIMIT);
 		message.append(String.valueOf(MSG_END));
 		return message.toString();
 	}
@@ -241,7 +262,8 @@ class PrepareMessage extends Message {
 	 */
 	Ballot ballot;
 
-	public PrepareMessage(MessageType type, int sender, int receiver, Ballot ballot) {
+	public PrepareMessage(MessageType type, int sender, int receiver,
+			Ballot ballot) {
 		super(type, receiver, sender);
 		this.ballot = ballot;
 	}
@@ -290,11 +312,8 @@ class ConfirmMessage extends Message {
 		return recvBallot;
 	}
 
-	
-
 	public String translate() {
 		StringBuilder message = new StringBuilder(super.translate());
-
 
 		message.append(String.valueOf(recvBallot.ballotNumber) + DELIMIT);
 		message.append(String.valueOf(recvBallot.serverNumber) + DELIMIT);
@@ -309,11 +328,15 @@ class ConfirmMessage extends Message {
 			message.append("NULL" + DELIMIT);
 			message.append("NULL" + DELIMIT);
 			message.append("NULL" + DELIMIT);
-		}
-		else {
+			message.append("NULL" + DELIMIT);
+			message.append("NULL" + DELIMIT);
+			
+		} else {
 			message.append(value.operation + DELIMIT);
 			message.append(String.valueOf(value.operand) + DELIMIT);
 			message.append(String.valueOf(value.logPosition) + DELIMIT);
+			message.append(String.valueOf(value.serverNo) + DELIMIT);
+			message.append(String.valueOf(value.sequenceNo) + DELIMIT);
 		}
 		message.append(String.valueOf(MSG_END));
 		return message.toString();
@@ -367,7 +390,11 @@ class SyncAckMessage extends Message {
 		for (int i = 0; i < recentLog.size(); i++) {
 			message.append(recentLog.get(i).operation + DELIMIT);
 			message.append(String.valueOf(recentLog.get(i).operand) + DELIMIT);
-			message.append(String.valueOf(recentLog.get(i).logPosition) + DELIMIT);
+			message.append(String.valueOf(recentLog.get(i).logPosition)
+					+ DELIMIT);			
+			message.append(String.valueOf(recentLog.get(i).serverNo) + DELIMIT);
+			message.append(String.valueOf(recentLog.get(i).sequenceNo) + DELIMIT);
+			
 		}
 		message.append(String.valueOf(MSG_END));
 		return message.toString();
