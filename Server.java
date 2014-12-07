@@ -14,7 +14,7 @@ public class Server {
 	final static int MAJORITY = TOTAL_SERVER / 2 + 1;
 	final static long TRANSACTION_TIMEOUT = 1000 * 4800;
 	State state;
-	
+
 	enum State {
 		STATE_START, STATE_TIMEOUT, STATE_CONFIRM, STATE_PREPARE, STATE_PROPOSER_ACCEPT, STATE_DECIDE, STATE_ACCEPTOR_ACCEPT
 	}
@@ -45,7 +45,7 @@ public class Server {
 	LogEntry nextOperation = null;
 
 	public Server(int serverNo) throws IOException {
-		sequenceNo =0;
+		sequenceNo = 0;
 		this.serverNo = serverNo;
 		state = State.STATE_START;
 		lock = new Boolean(true);
@@ -72,22 +72,23 @@ public class Server {
 		log = new Log();
 		balance = log.getBalance();
 	}
-	
+
 	private boolean hasMessage() {
 		boolean flag;
-		synchronized(this) {
+		synchronized (this) {
 			flag = recvMessageList.isEmpty();
 		}
 		return !flag;
 	}
-	
+
 	private boolean hasCommand() {
 		boolean flag;
-		synchronized(this) {
+		synchronized (this) {
 			flag = (command != null);
 		}
 		return flag;
 	}
+
 	public static void main(String[] args) throws IOException {
 		Server server;
 		String serverNumberString = null;
@@ -112,37 +113,39 @@ public class Server {
 			server.run();
 		}
 	}
-	
+
 	private void doSuspend() {
-		synchronized(lock) {
+		synchronized (lock) {
 			try {
 				lock.wait();
-			}
-			catch(InterruptedException ex) {
+			} catch (InterruptedException ex) {
 			}
 		}
 	}
-	
+
 	private boolean checkRedundantMessage(Message message) {
-		if (message == null) return false;
-		switch(message.getType()) {
-		case ACCEPT: 
-			AcceptMessage acceptMessage = (AcceptMessage)message;
-			return acceptMessage.getAcceptLog().getLogPosition() == log.getLogLength();
-		case DECIDE: 
-			DecideMessage decideMessage = (DecideMessage)message;
-			return decideMessage.getValue().getLogPosition() == log.getLogLength();
+		if (message == null)
+			return false;
+		switch (message.getType()) {
+		case ACCEPT:
+			AcceptMessage acceptMessage = (AcceptMessage) message;
+			return acceptMessage.getAcceptLog().getLogPosition() == (log
+					.getLogLength() - 1);
+		case DECIDE:
+			DecideMessage decideMessage = (DecideMessage) message;
+			return decideMessage.getValue().getLogPosition() == (log
+					.getLogLength() - 1);
 		default:
 			return true;
-		}		
+		}
 	}
-	
+
 	public void run() throws UnknownHostException, IOException {
 		// keep the last message and command unchanged
-		System.out.println("running server");
+		// System.out.println("running server");
 		if (serverSwitch)
 			message = getMessage();
-		
+
 		switch (state) {
 		case STATE_START:
 			if (message != null) {
@@ -150,14 +153,16 @@ public class Server {
 				System.out.println("MESSAGE: " + message.translate());
 				System.out.println("ACCEPTCOUNT: " + acceptCount);
 				if (currentBallot != null)
-				System.out.println("CURRENTBALLOT: " + currentBallot.toString());
-				else 
+					System.out.println("CURRENTBALLOT: "
+							+ currentBallot.toString());
+				else
 					System.out.println("CURRENTBALLOT: " + "NULL");
 				System.out.println("CURRENTVAL: " + currentOperation);
 				System.out.println("CONFIRMLIST" + confirmList.size());
 				switch (message.getType()) {
 				case ACCEPT:
-					if(checkRedundantMessage(message)) break;
+					if (checkRedundantMessage(message))
+						break;
 					AcceptMessage acceptMessage = (AcceptMessage) message;
 					// get an new operation to agree on
 					acceptCount = 1;
@@ -171,7 +176,8 @@ public class Server {
 					state = State.STATE_ACCEPTOR_ACCEPT;
 					break;
 				case DECIDE:
-					if(checkRedundantMessage(message)) break;
+					if (checkRedundantMessage(message))
+						break;
 					DecideMessage decideMessage = (DecideMessage) message;
 					currentOperation = decideMessage.getValue();
 					makeDecision(decideMessage.getValue());
@@ -186,6 +192,14 @@ public class Server {
 					acceptCount = 0;
 					state = State.STATE_CONFIRM;
 					break;
+				case SYNC_REQ:
+					sendSynAck(message);
+					break;
+				case SYNC_ACK:
+					if(!syncFlag)
+						appendSynAck(message);
+					break;
+				
 				default:
 					System.out.println("Redundant Message!");
 				}
@@ -206,8 +220,9 @@ public class Server {
 					System.out.println("MESSAGE: " + message.translate());
 					System.out.println("ACCEPTCOUNT: " + acceptCount);
 					if (currentBallot != null)
-					System.out.println("CURRENTBALLOT: " + currentBallot.toString());
-					else 
+						System.out.println("CURRENTBALLOT: "
+								+ currentBallot.toString());
+					else
 						System.out.println("CURRENTBALLOT: " + "NULL");
 					System.out.println("CURRENTVAL: " + currentOperation);
 					System.out.println("CONFIRMLIST" + confirmList.size());
@@ -221,8 +236,7 @@ public class Server {
 							Message reply = new ConfirmMessage(
 									MessageType.CONFIRM, serverNo,
 									message.getSender(),
-									prepareMessage.getBallot(), 
-									currentBallot,
+									prepareMessage.getBallot(), currentBallot,
 									null);
 							messenger.sendMessage(reply);
 							acceptCount = 0;
@@ -230,7 +244,8 @@ public class Server {
 						}
 						break;
 					case DECIDE:
-						if(checkRedundantMessage(message)) break;
+						if (checkRedundantMessage(message))
+							break;
 						DecideMessage decideMessage = (DecideMessage) message;
 						currentOperation = decideMessage.getValue();
 						makeDecision(decideMessage.getValue());
@@ -288,7 +303,16 @@ public class Server {
 							messenger.sendMessage(acceptMessage);
 							acceptCount = 1;
 							state = State.STATE_ACCEPTOR_ACCEPT;
+							break;
 						}
+					case SYNC_REQ:
+						sendSynAck(message);
+						break;
+					case SYNC_ACK:
+						if(!syncFlag)
+							appendSynAck(message);
+						break;
+
 					default:
 						System.out.println("Undefined Message!");
 					}
@@ -301,15 +325,17 @@ public class Server {
 				System.out.println("MESSAGE: " + message.translate());
 				System.out.println("ACCEPTCOUNT: " + acceptCount);
 				if (currentBallot != null)
-				System.out.println("CURRENTBALLOT: " + currentBallot.toString());
-				else 
+					System.out.println("CURRENTBALLOT: "
+							+ currentBallot.toString());
+				else
 					System.out.println("CURRENTBALLOT: " + "NULL");
 				System.out.println("CURRENTVAL: " + currentOperation);
 				System.out.println("CONFIRMLIST" + confirmList.size());
 
 				switch (message.getType()) {
 				case DECIDE:
-					if(checkRedundantMessage(message)) break;
+					if (checkRedundantMessage(message))
+						break;
 					DecideMessage decideMessage = (DecideMessage) message;
 					currentOperation = decideMessage.getValue();
 					makeDecision(decideMessage.getValue());
@@ -337,14 +363,21 @@ public class Server {
 				case PREPARE:
 					PrepareMessage prepareMessage = (PrepareMessage) message;
 					if (currentBallot.compareTo(prepareMessage.getBallot()) < 0) {
-							Message reply = new ConfirmMessage(MessageType.CONFIRM,
+						Message reply = new ConfirmMessage(MessageType.CONFIRM,
 								serverNo, message.getSender(),
 								prepareMessage.getBallot(), currentBallot, null);
-							currentBallot = prepareMessage.getBallot();
+						currentBallot = prepareMessage.getBallot();
 						messenger.sendMessage(reply);
 					}
 					confirmList.clear();
 					// state wont change
+					break;
+				case SYNC_REQ:
+					sendSynAck(message);
+					break;
+				case SYNC_ACK:
+					if(!syncFlag)
+						appendSynAck(message);
 					break;
 				default:
 					System.out.println("Undefined Message!");
@@ -363,7 +396,8 @@ public class Server {
 				System.out.println("STATE: " + state);
 				System.out.println("MESSAGE: " + message.translate());
 				System.out.println("ACCEPTCOUNT: " + acceptCount);
-				System.out.println("CURRENTBALLOT: " + currentBallot.toString());
+				System.out
+						.println("CURRENTBALLOT: " + currentBallot.toString());
 				System.out.println("CURRENTVAL: " + currentOperation);
 				System.out.println("CONFIRMLIST" + confirmList.size());
 
@@ -373,10 +407,11 @@ public class Server {
 
 					if (currentBallot.compareTo(prepareMessage.getBallot()) < 0) {
 						notifyTerminal(false);
-						
+
 						Message reply = new ConfirmMessage(MessageType.CONFIRM,
 								serverNo, message.getSender(),
-								prepareMessage.getBallot(), currentBallot, currentOperation);
+								prepareMessage.getBallot(), currentBallot,
+								currentOperation);
 						currentBallot = prepareMessage.getBallot();
 						acceptCount = 0;
 						messenger.sendMessage(reply);
@@ -384,7 +419,8 @@ public class Server {
 					}
 					break;
 				case DECIDE:
-					if(checkRedundantMessage(message)) break;
+					if (checkRedundantMessage(message))
+						break;
 					DecideMessage decideMessage = (DecideMessage) message;
 					currentOperation = decideMessage.getValue();
 					makeDecision(decideMessage.getValue());
@@ -402,7 +438,8 @@ public class Server {
 							.getBallot()) == 0) {
 						if ((++acceptCount) >= MAJORITY) {
 							// decide on the value and broadcast decide
-							if(checkRedundantMessage(message)) break;
+							if (checkRedundantMessage(message))
+								break;
 							DecideMessage newDecideMessage = new DecideMessage(
 									MessageType.DECIDE, this.serverNo,
 									Messenger.BROADCAST, currentOperation);
@@ -412,6 +449,13 @@ public class Server {
 							makeDecision(currentOperation);
 						}
 					}
+					break;
+				case SYNC_REQ:
+					sendSynAck(message);
+					break;
+				case SYNC_ACK:
+					if(!syncFlag)
+						appendSynAck(message);
 					break;
 				default:
 					System.out.println("Redundant Message!");
@@ -424,8 +468,9 @@ public class Server {
 				System.out.println("MESSAGE: " + message.translate());
 				System.out.println("ACCEPTCOUNT: " + acceptCount);
 				if (currentBallot != null)
-				System.out.println("CURRENTBALLOT: " + currentBallot.toString());
-				else 
+					System.out.println("CURRENTBALLOT: "
+							+ currentBallot.toString());
+				else
 					System.out.println("CURRENTBALLOT: " + "NULL");
 				System.out.println("CURRENTVAL: " + currentOperation);
 				System.out.println("CONFIRMLIST" + confirmList.size());
@@ -446,7 +491,8 @@ public class Server {
 					}
 					break;
 				case DECIDE:
-					if(checkRedundantMessage(message)) break;
+					if (checkRedundantMessage(message))
+						break;
 					DecideMessage decideMessage = (DecideMessage) message;
 					currentOperation = decideMessage.getValue();
 					makeDecision(decideMessage.getValue());
@@ -462,7 +508,8 @@ public class Server {
 							.getBallot()) == 0) {
 						if ((++acceptCount) >= MAJORITY) {
 							// decide on the value and broadcast decide
-							if(checkRedundantMessage(message)) break;
+							if (checkRedundantMessage(message))
+								break;
 							DecideMessage newDecideMessage = new DecideMessage(
 									MessageType.DECIDE, this.serverNo,
 									Messenger.BROADCAST, currentOperation);
@@ -472,6 +519,13 @@ public class Server {
 							makeDecision(currentOperation);
 						}
 					}
+					break;
+				case SYNC_REQ:
+					sendSynAck(message);
+					break;
+				case SYNC_ACK:
+					if(!syncFlag)
+						appendSynAck(message);
 					break;
 				default:
 					System.out.println("Undefined Message!");
@@ -488,6 +542,33 @@ public class Server {
 			terminal.command = null;
 			nextOperation = null;
 		}
+	}
+
+	private void appendSynAck(Message message2) {
+		SyncAckMessage synAckMessage = (SyncAckMessage) message;
+		for(LogEntry e:synAckMessage.recentLog){
+			log.appendLogEntry(e);
+			updateBalance(e);
+		}
+		syncFlag = true;
+		
+	}
+	private void updateBalance(LogEntry e){
+		if(e.operation.equals("withdraw"))
+			balance -= e.operand;
+		else if(e.operation.equals("deposit")) 
+			balance += e.operand;
+	}
+	
+
+	private void sendSynAck(Message message) throws IOException {
+		SyncReqMessage synReqMessage = (SyncReqMessage) message;
+		int logLength = synReqMessage.logLength;
+		List<LogEntry> recentLogs = new LinkedList<LogEntry>();
+		recentLogs.addAll(log.logs.subList(logLength, log.getLogLength()));
+		SyncAckMessage synAckMessage = new SyncAckMessage(MessageType.SYNC_ACK,
+				serverNo, synReqMessage.sender, recentLogs);
+		messenger.sendMessage(synAckMessage);
 	}
 
 	private LogEntry selectOperation() {
@@ -563,8 +644,6 @@ public class Server {
 					serverNo);
 	}
 
-	
-
 	private static String getCorrestInput() {
 		System.out.println("Please enter the server number:");
 		BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
@@ -582,6 +661,7 @@ public class Server {
 
 	private void makeDecision(LogEntry operation) {
 		log.appendLogEntry(operation);
+		updateBalance(operation);
 		notifyTerminal(true);
 		acceptCount = 0;
 		state = State.STATE_START;
@@ -606,7 +686,7 @@ public class Server {
 					double value = Double.parseDouble(valueString);
 					// start proposal with currentBallot and currentOperation
 					currentOperation = new LogEntry("deposit", value,
-							log.getLogPosition(),serverNo,sequenceNo++);
+							log.getLogPosition(), serverNo, sequenceNo++);
 					if (!syncFlag)
 						System.out.println("Unsynchronized!");
 					else {
@@ -629,8 +709,8 @@ public class Server {
 				try {
 					double value = Double.parseDouble(valueString);
 					// start proposal with currentBallot and currentOperation
-					currentOperation = new LogEntry("deposit", value,
-							log.getLogPosition(),serverNo,sequenceNo++);
+					currentOperation = new LogEntry("withdraw", value,
+							log.getLogPosition(), serverNo, sequenceNo++);
 					if (!syncFlag)
 						System.out.println("Unsynchronized!");
 					else {
@@ -668,11 +748,17 @@ public class Server {
 		case 'u':
 			if (s.equals("unfail()")) {
 				serverSwitch = true;
-				startSynchronization();
+				state = State.STATE_START;
+				recvMessageList.clear();
+				startSynchronization();				
 				System.out.println("unfail the server");
 			} else {
 				handleInvalidInput();
 			}
+			break;
+		case 'p':
+			if(s.equals("print()"))
+				printAllLogs();
 			break;
 		default:
 			handleInvalidInput();
@@ -680,6 +766,13 @@ public class Server {
 		this.command = null;
 		terminal.command = null;
 		return null;
+	}
+
+	private void printAllLogs() {
+		System.out.println("log history:");
+		List<LogEntry> history = log.logs;
+		for(int i = history.size()-1; i>=0; i--)
+			System.out.println(history.get(i).operation +"\t"+ history.get(i).operand);		
 	}
 
 	public void handleInvalidInput() {

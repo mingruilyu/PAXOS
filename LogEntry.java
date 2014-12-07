@@ -44,8 +44,7 @@ public class LogEntry implements Comparable<LogEntry> {
 	public int compareTo(LogEntry log) {
 		if (log == null)
 			return 1;
-		if (log.operation.equals(this.operation) && log.operand == this.operand
-				&& log.logPosition == this.logPosition)
+		if (this.serverNo==log.serverNo && this.sequenceNo == log.sequenceNo)
 			return 0;
 		return -1;
 	}
