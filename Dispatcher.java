@@ -13,8 +13,10 @@ public class Dispatcher extends Thread{
 	ExecutorService threadPool = Executors.newFixedThreadPool(THREAD_POOL_SIZE);
 	List<Message> messageList;
 	ServerSocket serverSocket;
-	public Dispatcher(List<Message> messageList, int port) {
+	Boolean lock;
+	public Dispatcher(List<Message> messageList, int port, Boolean lock) {
 		this.messageList = messageList;
+		this.lock = lock;
 		try {
 			serverSocket = new ServerSocket(port);
 		}
@@ -26,7 +28,7 @@ public class Dispatcher extends Thread{
 		while (true) {
 			try {
 				Socket connection = serverSocket.accept();
-				Callable<Void> task = new NewMessageTask(connection, messageList);
+				Callable<Void> task = new NewMessageTask(connection, messageList, lock);
 				threadPool.submit(task);
 			} 
 			catch (IOException ex) {}

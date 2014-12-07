@@ -7,15 +7,15 @@ import java.util.concurrent.Semaphore;
 
 public class Terminal extends Thread {
 	String command;
+	Boolean lock;
+	
+	public Terminal(Boolean lock) {
+		this.lock = lock;
+	}
+	
 	public String getCommand() {
 		return command;
 	}
-	
-	/*public void clearCommand() {
-		synchronized(this) {
-			command = null;
-		}
-	}*/
 	
 	@Override
 	public void run() {
@@ -26,7 +26,9 @@ public class Terminal extends Thread {
 				synchronized(this) {
 					command = br.readLine();
 					System.out.println(command);
-					
+				}
+				synchronized(lock) {
+					lock.notify();
 				}
 			} catch (IOException ioe) {
 				System.out.println("IO error trying to read your command!");

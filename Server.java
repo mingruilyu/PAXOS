@@ -7,12 +7,14 @@ import java.net.UnknownHostException;
 import java.util.LinkedList;
 import java.util.List;
 
+import javax.management.Notification;
+
 public class Server {
 	final static int TOTAL_SERVER = 3;
 	final static int MAJORITY = TOTAL_SERVER / 2 + 1;
 	final static long TRANSACTION_TIMEOUT = 1000 * 4800;
 	State state;
-
+	
 	enum State {
 		STATE_START, STATE_TIMEOUT, STATE_CONFIRM, STATE_PREPARE, STATE_PROPOSER_ACCEPT, STATE_DECIDE, STATE_ACCEPTOR_ACCEPT
 	}
@@ -23,7 +25,7 @@ public class Server {
 	Ballot currentBallot;
 	boolean syncFlag;
 	ServerTimer userTimer;
-
+	Boolean notifycation;
 	double balance;
 
 	boolean mode; // ISPAXOS or not
@@ -37,13 +39,14 @@ public class Server {
 	boolean serverSwitch;
 	String command;
 	Dispatcher dispatcher;
-
+	Boolean lock;
 	Message message = null;
 	LogEntry nextOperation = null;
 
 	public Server(int serverNo) throws IOException {
 		this.serverNo = serverNo;
 		state = State.STATE_START;
+		lock = new Boolean(true);
 		serverSwitch = true;
 		currentOperation = null;
 		currentBallot = null;
@@ -57,15 +60,31 @@ public class Server {
 		messenger = Messenger.getMessenger();
 		// start dispatcher
 		dispatcher = new Dispatcher(recvMessageList,
-				messenger.getPort(serverNo));
+				messenger.getPort(serverNo), lock);
 		dispatcher.start();
 		// start terminal
-		terminal = new Terminal();
+		terminal = new Terminal(lock);
 		terminal.start();
 		syncFlag = true;
 		// read in log
 		log = new Log();
 		balance = log.getBalance();
+	}
+	
+	private boolean hasMessage() {
+		boolean flag;
+		synchronized(this) {
+			flag = recvMessageList.isEmpty();
+		}
+		return !flag;
+	}
+	
+	private boolean hasCommand() {
+		boolean flag;
+		synchronized(this) {
+			flag = (command != null);
+		}
+		return flag;
 	}
 	public static void main(String[] args) throws IOException {
 		Server server;
@@ -86,7 +105,19 @@ public class Server {
 				serverNumberString = getCorrestInput();
 		}
 		while (true) {
+			if (!server.hasMessage() && !server.hasCommand())
+				server.doSuspend();
 			server.run();
+		}
+	}
+	
+	private void doSuspend() {
+		synchronized(lock) {
+			try {
+				lock.wait();
+			}
+			catch(InterruptedException ex) {
+			}
 		}
 	}
 	
@@ -106,8 +137,9 @@ public class Server {
 	
 	public void run() throws UnknownHostException, IOException {
 		// keep the last message and command unchanged
+		System.out.println("running server");
 		if (serverSwitch)
-			message = checkMessage();
+			message = getMessage();
 		
 		switch (state) {
 		case STATE_START:
@@ -230,6 +262,7 @@ public class Server {
 									Messenger.BROADCAST, currentBallot,
 									maxBallotOperation);
 							notifyTerminal(false);
+							currentOperation = maxBallotOperation;
 							acceptCount = 1;
 							state = State.STATE_ACCEPTOR_ACCEPT;
 						}
@@ -447,7 +480,7 @@ public class Server {
 			System.out.println("STATE: " + state);
 			System.out.println("Undefined State!");
 		}
-		if ((nextOperation = checkCommand()) != null) {
+		if ((nextOperation = getCommand()) != null) {
 			state = State.STATE_PREPARE;
 			startProposal(nextOperation);
 			terminal.command = null;
@@ -469,7 +502,7 @@ public class Server {
 		return maxBallotValue;
 	}
 
-	private LogEntry checkCommand() throws UnknownHostException, IOException {
+	private LogEntry getCommand() throws UnknownHostException, IOException {
 		synchronized (this) {
 			command = terminal.getCommand();
 		}
@@ -478,7 +511,7 @@ public class Server {
 		return null;
 	}
 
-	private Message checkMessage() {
+	private Message getMessage() {
 		Message message = null;
 		synchronized (this) {
 			if (!recvMessageList.isEmpty())
@@ -642,7 +675,7 @@ public class Server {
 		default:
 			handleInvalidInput();
 		}
-		command = null;
+		this.command = null;
 		terminal.command = null;
 		return null;
 	}

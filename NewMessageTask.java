@@ -9,9 +9,11 @@ import java.util.concurrent.*;
 public class NewMessageTask implements Callable<Void>{
 	private Socket connection;
 	private List<Message> messageList;
-	public NewMessageTask(Socket connection, List<Message> messageList) {
+	private Boolean lock;
+	public NewMessageTask(Socket connection, List<Message> messageList, Boolean lock) {
 		this.connection = connection;
 		this.messageList = messageList;
+		this.lock = lock;
 	}
 	public Void call() throws IOException {
 		InputStreamReader reader = new InputStreamReader(connection.getInputStream());
@@ -22,6 +24,9 @@ public class NewMessageTask implements Callable<Void>{
 		Message newMessage = Message.parseMessage(message.toString());
 		synchronized(this) {
 			messageList.add(newMessage);
+		}
+		synchronized(lock) {
+			lock.notify();
 		}
 		return null;
 	}
