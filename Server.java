@@ -142,7 +142,7 @@ public class Server {
 		switch (message.getType()) {
 		case ACCEPT:
 			AcceptMessage acceptMessage = (AcceptMessage) message;
-			return compareLists(acceptMessage.getAcceptLog(), currentOperation);
+			return log.checkOperations(acceptMessage.getAcceptLog());
 		case DECIDE:
 			DecideMessage decideMessage = (DecideMessage) message;
 			return log.checkOperations(decideMessage.getValue());
@@ -154,9 +154,11 @@ public class Server {
 	public void run() throws UnknownHostException, IOException {
 		// keep the last message and command unchanged
 		// System.out.println("running server");
-		if (serverSwitch)
+		if (serverSwitch) 
 			message = getMessage();
-
+		if (message != null && checkRedundantMessage(message)) {
+			message = null;
+		}
 		switch (state) {
 		case STATE_START:
 			if (message != null) {
@@ -172,8 +174,6 @@ public class Server {
 				System.out.println("CONFIRMLIST" + confirmList.size());
 				switch (message.getType()) {
 				case ACCEPT:
-					if (checkRedundantMessage(message))
-						break;
 					AcceptMessage acceptMessage = (AcceptMessage) message;
 					// get an new operation to agree on
 					acceptCount = 1;
@@ -187,8 +187,8 @@ public class Server {
 					state = State.STATE_ACCEPTOR_ACCEPT;
 					break;
 				case DECIDE:
-					if (checkRedundantMessage(message))
-						break;
+					//if (checkRedundantMessage(message))
+						//break;
 					DecideMessage decideMessage = (DecideMessage) message;
 					currentOperation = decideMessage.getValue();
 					makeDecision(decideMessage.getValue());
@@ -255,8 +255,8 @@ public class Server {
 						}
 						break;
 					case DECIDE:
-						if (checkRedundantMessage(message))
-							break;
+						//if (checkRedundantMessage(message))
+							//break;
 						DecideMessage decideMessage = (DecideMessage) message;
 						currentOperation = decideMessage.getValue();
 						makeDecision(decideMessage.getValue());
@@ -386,8 +386,8 @@ public class Server {
 
 				switch (message.getType()) {
 				case DECIDE:
-					if (checkRedundantMessage(message))
-						break;
+					//if (checkRedundantMessage(message))
+						//break;
 					DecideMessage decideMessage = (DecideMessage) message;
 					currentOperation = decideMessage.getValue();
 					makeDecision(decideMessage.getValue());
@@ -471,8 +471,8 @@ public class Server {
 					}
 					break;
 				case DECIDE:
-					if (checkRedundantMessage(message))
-						break;
+					//if (checkRedundantMessage(message))
+						//break;
 					DecideMessage decideMessage = (DecideMessage) message;
 					currentOperation = decideMessage.getValue();
 					makeDecision(decideMessage.getValue());
@@ -490,8 +490,8 @@ public class Server {
 							.getBallot()) == 0) {
 						if ((++acceptCount) >= MAJORITY) {
 							// decide on the value and broadcast decide
-							if (checkRedundantMessage(message))
-								break;
+							//if (checkRedundantMessage(message))
+								//break;
 							DecideMessage newDecideMessage = new DecideMessage(
 									MessageType.DECIDE, this.serverNo,
 									Messenger.BROADCAST, currentOperation);
@@ -543,8 +543,8 @@ public class Server {
 					}
 					break;
 				case DECIDE:
-					if (checkRedundantMessage(message))
-						break;
+					//if (checkRedundantMessage(message))
+						//break;
 					DecideMessage decideMessage = (DecideMessage) message;
 					currentOperation = decideMessage.getValue();
 					makeDecision(decideMessage.getValue());
@@ -560,8 +560,8 @@ public class Server {
 							.getBallot()) == 0) {
 						if ((++acceptCount) >= MAJORITY) {
 							// decide on the value and broadcast decide
-							if (checkRedundantMessage(message))
-								break;
+							//if (checkRedundantMessage(message))
+								//break;
 							DecideMessage newDecideMessage = new DecideMessage(
 									MessageType.DECIDE, this.serverNo,
 									Messenger.BROADCAST, currentOperation);
