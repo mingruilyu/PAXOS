@@ -16,6 +16,7 @@ public class ServerTimer {
 		startTime = System.currentTimeMillis();
 	}
 	public long getTime() {
-		return System.currentTimeMillis() - startTime;
+		long time = System.currentTimeMillis() - startTime;
+		return time;
 	}
 }

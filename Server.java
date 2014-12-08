@@ -4,12 +4,8 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.UnknownHostException;
-import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.Map;
-
-import javax.management.Notification;
 
 public class Server {
 	final static int TOTAL_SERVER = 3;
@@ -275,7 +271,7 @@ public class Server {
 						// check how many confirm Message that has ballot that
 						// is the
 						// same as the currentBallot
-						if (confirmList.size() < TOTAL_SERVER || waitTimer.getTime() < ACKWAIT_TIMEOUT) {
+						if (confirmList.size() < TOTAL_SERVER  - 1|| waitTimer.getTime() < ACKWAIT_TIMEOUT) {
 							break;
 						}
 						waitTimer.turnOff();
@@ -290,6 +286,9 @@ public class Server {
 									MessageType.ACCEPT, serverNo,
 									Messenger.BROADCAST, currentBallot,
 									currentOperation);
+
+							acceptCount = 1;
+							state = State.STATE_PROPOSER_ACCEPT;
 						}
 						else {
 							int[] entryMap = {1, 0, 0, 0, 0};
@@ -312,23 +311,31 @@ public class Server {
 										MessageType.ACCEPT, serverNo,
 										Messenger.BROADCAST, currentBallot,
 										currentOperation);
+
+								acceptCount = 1;
+								state = State.STATE_PROPOSER_ACCEPT;
 							}
 								
-							else {	 
+							else if (confirmList.size() >= MAJORITY - 1){	 
 								List<LogEntry> maxBallotOperation = selectOperation();
 									acceptRequest = new AcceptMessage(
 											MessageType.ACCEPT, serverNo,
 											Messenger.BROADCAST, currentBallot,
 											maxBallotOperation);
-									notifyTerminal(false);
 									currentOperation = maxBallotOperation;
+
+									acceptCount = 1;
+									state = State.STATE_PROPOSER_ACCEPT;
+							}
+							else {
+								notifyTerminal(false);
+								state = State.STATE_START;
 							}
 
-							acceptCount = 1;
-							state = State.STATE_PROPOSER_ACCEPT;
 						}
 						// help with propagation of the other proposal
-						messenger.sendMessage(acceptRequest);
+						if (acceptRequest != null)
+							messenger.sendMessage(acceptRequest);
 						break;
 					case ACCEPT:
 						AcceptMessage acceptMessage = (AcceptMessage) message;
@@ -679,8 +686,8 @@ public class Server {
 		Message newProposal = new PrepareMessage(MessageType.PREPARE, serverNo,
 				Messenger.BROADCAST, currentBallot);
 		confirmList.clear();
-		confirmList.add(new ConfirmMessage(MessageType.CONFIRM, serverNo,
-				this.serverNo, this.currentBallot, null, null));
+		//confirmList.add(new ConfirmMessage(MessageType.CONFIRM, serverNo,
+			//	this.serverNo, this.currentBallot, null, null));
 		acceptCount = 0;
 		messenger.sendMessage(newProposal);
 	}
