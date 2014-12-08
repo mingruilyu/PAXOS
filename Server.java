@@ -4,8 +4,10 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.UnknownHostException;
+import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
 
 import javax.management.Notification;
 
@@ -13,6 +15,7 @@ public class Server {
 	final static int TOTAL_SERVER = 3;
 	final static int MAJORITY = TOTAL_SERVER / 2 + 1;
 	final static long TRANSACTION_TIMEOUT = 1000 * 4800;
+	final static long ACKWAIT_TIMEOUT = 1000;
 	State state;
 
 	enum State {
@@ -21,10 +24,11 @@ public class Server {
 
 	Log log;
 	int serverNo;
-	LogEntry currentOperation;
+	List<LogEntry> currentOperation;
 	Ballot currentBallot;
 	boolean syncFlag;
 	ServerTimer userTimer;
+	ServerTimer waitTimer;
 	Boolean notifycation;
 	double balance;
 	int sequenceNo;
@@ -42,7 +46,7 @@ public class Server {
 	Dispatcher dispatcher;
 	Boolean lock;
 	Message message = null;
-	LogEntry nextOperation = null;
+	List<LogEntry> nextOperation = null;
 
 	public Server(int serverNo) throws IOException {
 		sequenceNo = 0;
@@ -53,6 +57,7 @@ public class Server {
 		currentOperation = null;
 		currentBallot = null;
 		userTimer = new ServerTimer();
+		waitTimer = new ServerTimer();
 		// initialize messagelist, confirmlist
 		command = null;
 		recvMessageList = new LinkedList<Message>();
@@ -122,19 +127,29 @@ public class Server {
 			}
 		}
 	}
-
+	private boolean compareLists(List<LogEntry> list1, List<LogEntry> list2) {
+		if (list1 == null && list2 != null) return false;
+		if (list1 != null && list2 == null) return false;
+		if (list1 == null && list2 == null) return true;
+		if (list1.size() != list2.size()) return false;
+		
+		for (int i = 0; i < list1.size();i ++) {
+			if (list1.get(i).compareTo(list2.get(i)) != 0)
+				return false;
+			
+		}
+		return true;
+	}
 	private boolean checkRedundantMessage(Message message) {
 		if (message == null)
 			return false;
 		switch (message.getType()) {
 		case ACCEPT:
 			AcceptMessage acceptMessage = (AcceptMessage) message;
-			return acceptMessage.getAcceptLog().getLogPosition() == (log
-					.getLogLength() - 1);
+			return compareLists(acceptMessage.getAcceptLog(), currentOperation);
 		case DECIDE:
 			DecideMessage decideMessage = (DecideMessage) message;
-			return decideMessage.getValue().getLogPosition() == (log
-					.getLogLength() - 1);
+			return log.checkOperations(decideMessage.getValue());
 		default:
 			return true;
 		}
@@ -260,29 +275,59 @@ public class Server {
 						// check how many confirm Message that has ballot that
 						// is the
 						// same as the currentBallot
-						if (confirmList.size() < MAJORITY)
+						if (confirmList.size() < TOTAL_SERVER || waitTimer.getTime() < ACKWAIT_TIMEOUT) {
 							break;
-						LogEntry maxBallotOperation = selectOperation();
-						Message acceptRequest;
-						if (maxBallotOperation == null) {
-							// broadcast accept request with currentOperation
+						}
+						waitTimer.turnOff();
+						boolean nullFlag = true;
+						for (int i = 0; i < confirmList.size(); i ++) {
+							if(confirmList.get(i).getValue() != null)
+								nullFlag = false;
+						}
+						Message acceptRequest = null;
+						if (nullFlag) {
 							acceptRequest = new AcceptMessage(
 									MessageType.ACCEPT, serverNo,
 									Messenger.BROADCAST, currentBallot,
 									currentOperation);
+						}
+						else {
+							int[] entryMap = {1, 0, 0, 0, 0};
+							for(int i = 1; i < confirmList.size(); i ++){
+								for(int j = 0; j < i; j ++) {
+									if (compareLists(confirmList.get(i).getValue(), confirmList.get(j).getValue()))
+										entryMap[j] ++;
+									else entryMap[i] = 1;
+								}
+							}
+							int maxPos = 0;
+							for (int i = 0; i < entryMap.length; i ++){
+								if (entryMap[i] > entryMap[maxPos]) {
+									maxPos = i;
+								}
+							}
+							if(!mode && entryMap[maxPos] + TOTAL_SERVER - confirmList.size() <= TOTAL_SERVER / 2){
+								generateCombinedValue(confirmList.get(maxPos).getValue());
+								acceptRequest = new AcceptMessage(
+										MessageType.ACCEPT, serverNo,
+										Messenger.BROADCAST, currentBallot,
+										currentOperation);
+							}
+								
+							else {	 
+								List<LogEntry> maxBallotOperation = selectOperation();
+									acceptRequest = new AcceptMessage(
+											MessageType.ACCEPT, serverNo,
+											Messenger.BROADCAST, currentBallot,
+											maxBallotOperation);
+									notifyTerminal(false);
+									currentOperation = maxBallotOperation;
+							}
+
 							acceptCount = 1;
 							state = State.STATE_PROPOSER_ACCEPT;
-						} else {
-							// help with propagation of the other proposal
-							acceptRequest = new AcceptMessage(
-									MessageType.ACCEPT, serverNo,
-									Messenger.BROADCAST, currentBallot,
-									maxBallotOperation);
-							notifyTerminal(false);
-							currentOperation = maxBallotOperation;
-							acceptCount = 1;
-							state = State.STATE_ACCEPTOR_ACCEPT;
 						}
+						// help with propagation of the other proposal
 						messenger.sendMessage(acceptRequest);
 						break;
 					case ACCEPT:
@@ -546,18 +591,29 @@ public class Server {
 
 	private void appendSynAck(Message message2) {
 		SyncAckMessage synAckMessage = (SyncAckMessage) message;
-		for(LogEntry e:synAckMessage.recentLog){
+		for(LogEntry e:synAckMessage.recentLog)
 			log.appendLogEntry(e);
-			updateBalance(e);
-		}
+		updateBalance(synAckMessage.getRecentLog());
 		syncFlag = true;
 		
 	}
-	private void updateBalance(LogEntry e){
-		if(e.operation.equals("withdraw"))
-			balance -= e.operand;
-		else if(e.operation.equals("deposit")) 
-			balance += e.operand;
+	
+	private void generateCombinedValue(List<LogEntry> votedValue) {
+		if (balance + checkValue(votedValue) + checkValue(currentOperation) > 0)
+			currentOperation.addAll(votedValue);
+	}
+	private double checkValue(List<LogEntry> list) {
+		double total = 0;
+		for (LogEntry logEntry : list) {
+			if(logEntry.operation.equals("withdraw"))
+				total -= logEntry.operand;
+			else if(logEntry.operation.equals("deposit")) 
+				total += logEntry.operand;
+		}
+		return total;
+	}
+	private void updateBalance(List<LogEntry> list){
+		balance += checkValue(list);
 	}
 	
 
@@ -571,9 +627,9 @@ public class Server {
 		messenger.sendMessage(synAckMessage);
 	}
 
-	private LogEntry selectOperation() {
+	private List<LogEntry> selectOperation() {
 		Ballot recvMaxBallot = null;
-		LogEntry maxBallotValue = null;
+		List<LogEntry> maxBallotValue = null;
 		for (int i = 0; i < confirmList.size(); i++) {
 			ConfirmMessage recvConfirm = confirmList.get(i);
 			if (recvMaxBallot == null
@@ -585,7 +641,7 @@ public class Server {
 		return maxBallotValue;
 	}
 
-	private LogEntry getCommand() throws UnknownHostException, IOException {
+	private List<LogEntry> getCommand() throws UnknownHostException, IOException {
 		synchronized (this) {
 			command = terminal.getCommand();
 		}
@@ -613,7 +669,7 @@ public class Server {
 		confirmList.clear();
 	}
 
-	public void startProposal(LogEntry nextOperation)
+	public void startProposal(List<LogEntry> nextOperation)
 			throws UnknownHostException, IOException {
 		if (!syncFlag)
 			return;
@@ -659,15 +715,18 @@ public class Server {
 
 	}
 
-	private void makeDecision(LogEntry operation) {
-		log.appendLogEntry(operation);
+	private void makeDecision(List<LogEntry> operation) {
+		for (LogEntry entry : operation) {
+			log.appendLogEntry(entry);
+			
+		}	
 		updateBalance(operation);
 		notifyTerminal(true);
 		acceptCount = 0;
 		state = State.STATE_START;
 	}
 
-	public LogEntry interpret(String s) throws UnknownHostException,
+	public List<LogEntry> interpret(String s) throws UnknownHostException,
 			IOException {
 		if (s == null || s.length() == 0)
 			return null;
@@ -675,6 +734,8 @@ public class Server {
 		char firstChar = command.charAt(0);
 		userTimer.turnOn();
 		userTimer.resetTimer();
+		waitTimer.turnOn();
+		waitTimer.resetTimer();
 		switch (firstChar) {
 		case 'd':
 			String[] depositCommand = command.split("\\(");
@@ -685,8 +746,9 @@ public class Server {
 				try {
 					double value = Double.parseDouble(valueString);
 					// start proposal with currentBallot and currentOperation
-					currentOperation = new LogEntry("deposit", value,
-							log.getLogPosition(), serverNo, sequenceNo++);
+					currentOperation = new LinkedList<LogEntry>();
+					currentOperation.add(new LogEntry("deposit", value,
+							log.getLogPosition(), serverNo, sequenceNo++));
 					if (!syncFlag)
 						System.out.println("Unsynchronized!");
 					else {
@@ -709,8 +771,9 @@ public class Server {
 				try {
 					double value = Double.parseDouble(valueString);
 					// start proposal with currentBallot and currentOperation
-					currentOperation = new LogEntry("withdraw", value,
-							log.getLogPosition(), serverNo, sequenceNo++);
+					currentOperation = new LinkedList<LogEntry>();
+					currentOperation.add(new LogEntry("withdraw", value,
+							log.getLogPosition(), serverNo, sequenceNo++));
 					if (!syncFlag)
 						System.out.println("Unsynchronized!");
 					else {

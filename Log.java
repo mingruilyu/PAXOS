@@ -63,20 +63,17 @@ public class Log {
 	public int getLogLength(){
 		return logs.size();
 	}
-	public boolean verifyLogs(double currentBalance) {
-		double sum = 0;
-		for (LogEntry e : logs) {
-			switch (e.operation.toLowerCase()) {
-			case "withdraw":
-				sum = sum - e.operand;
-				break;
-			case "deposit":
-				sum = sum + e.operand;
-				break;
-
+	
+	public boolean checkOperations(List<LogEntry> list){
+		for(LogEntry entry : list) {
+			int targetPos = entry.getLogPosition();
+			if (targetPos > list.size() - 1) continue;
+			for (int i = targetPos; i < logs.size(); i ++) {
+				if (logs.get(i).compareTo(logs.get(i)) == 0)
+					return true;
 			}
 		}
-		return sum == currentBalance;
+		return false;
 	}
 	
 	public double getBalance() {
