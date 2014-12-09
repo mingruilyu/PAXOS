@@ -108,7 +108,7 @@ public class Server {
 				serverNumberString = getCorrestInput();
 		}
 		while (true) {
-			if (!server.hasMessage() && !server.hasCommand())
+			if (!server.hasMessage() && !server.hasCommand() && server.waitTimer == null)
 				server.doSuspend();
 			server.run();
 		}
@@ -257,8 +257,8 @@ public class Server {
 						//if (checkRedundantMessage(message))
 							//break;
 						DecideMessage decideMessage = (DecideMessage) message;
-						currentOperation = decideMessage.getValue();
 						notifyTerminal(false);
+						currentOperation = decideMessage.getValue();
 						makeDecision(decideMessage.getValue());
 						state = State.STATE_START;
 						break;
@@ -274,8 +274,10 @@ public class Server {
 						if (confirmList.size() < TOTAL_SERVER  - 1 && !waitTimer.notification) {
 							break;
 						}
-						if(waitTimer!=null)
+						if(waitTimer!=null) {
 							waitTimer.cancel();
+							waitTimer = null;
+						}
 						boolean nullFlag = true;
 						for (int i = 0; i < confirmList.size(); i ++) {
 							if(confirmList.get(i).getValue() != null)
@@ -415,7 +417,7 @@ public class Server {
 					break;
 				case PREPARE:
 					PrepareMessage prepareMessage = (PrepareMessage) message;
-					if (currentBallot.compareTo(prepareMessage.getBallot()) < 0) {
+					if (currentBallot == null && currentBallot.compareTo(prepareMessage.getBallot()) < 0) {
 						Message reply = new ConfirmMessage(MessageType.CONFIRM,
 								serverNo, message.getSender(),
 								prepareMessage.getBallot(), currentBallot, null);

@@ -29,8 +29,12 @@ class TimerAction extends TimerTask {
 	public void run() {
 		notification = true;
 		if (notify) {
+			System.out.println("USERTIMER TIMEOUT");
 			server.notifyTerminal(false);
 			server.state = Server.State.STATE_START;
+		}
+		else {
+			System.out.println("WAITTIMER TIMEOUT");
 		}
 	}
 	
