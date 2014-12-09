@@ -544,7 +544,7 @@ public class Server {
 				nullFlag = false;
 		}
 		Message acceptRequest = null;
-		if (nullFlag) {
+		if (nullFlag && !confirmList.isEmpty()) {
 			acceptRequest = new AcceptMessage(MessageType.ACCEPT, serverNo,
 											  Messenger.BROADCAST, currentBallot,
 					currentOperation);
