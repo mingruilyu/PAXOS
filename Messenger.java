@@ -61,7 +61,7 @@ public class Messenger {
 					BufferedWriter bufferedWriter = new BufferedWriter(writer);
 					bufferedWriter.write(message.translate());
 					bufferedWriter.flush();
-					System.out.println("MESSAGE: " + message.translate());
+					//System.out.println("MESSAGE: " + message.translate());
 			}
 		}
 		else {
@@ -72,7 +72,7 @@ public class Messenger {
 			BufferedWriter bufferedWriter = new BufferedWriter(writer);
 			bufferedWriter.write(message.translate());
 			bufferedWriter.flush();
-			System.out.println("MESSAGE: " + message.translate());
+			//System.out.println("MESSAGE: " + message.translate());
 		}
 		catch(IOException ex) {
 			System.out.println("Sending Message Error!");

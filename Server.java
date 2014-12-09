@@ -18,7 +18,7 @@ public class Server {
 	enum State {
 		STATE_START, STATE_TIMEOUT, STATE_CONFIRM, STATE_PREPARE, STATE_PROPOSER_ACCEPT, STATE_DECIDE, STATE_ACCEPTOR_ACCEPT
 	}
-
+	boolean isProposer;
 	Log log;
 	int serverNo;
 	List<LogEntry> currentOperation;
@@ -675,12 +675,15 @@ public class Server {
 	}
 
 	public void notifyTerminal(boolean success) {
-		String indicator = success ? "SUCCEED" : "FAIL";
+		String indicator = success ? "SUCCESS" : "FAILURE";
 		if (userTimer != null)
 			userTimer.cancel();
 		if (waitTimer != null)
 			waitTimer.cancel();
-		System.out.println("The Last Operation " + currentOperation + indicator);
+		//System.out.println("The Last Operation " + currentOperation + indicator);
+		if (isProposer)
+			System.out.println(indicator);
+		isProposer = false;
 		currentBallot = null;
 		currentOperation = null;
 		confirmList.clear();
@@ -691,6 +694,7 @@ public class Server {
 		if (!syncFlag)
 			return;
 		state = State.STATE_PREPARE;
+		isProposer = true;
 		updateBallot();
 		currentOperation = nextOperation;
 		Message newProposal = new PrepareMessage(MessageType.PREPARE, serverNo,
