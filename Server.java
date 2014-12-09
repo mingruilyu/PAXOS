@@ -694,7 +694,6 @@ public class Server {
 		if (!syncFlag)
 			return;
 		state = State.STATE_PREPARE;
-		isProposer = true;
 		updateBallot();
 		currentOperation = nextOperation;
 		Message newProposal = new PrepareMessage(MessageType.PREPARE, serverNo,
@@ -763,6 +762,8 @@ public class Server {
 				String valueString = depositCommand[1].trim().substring(0,
 						depositCommand[1].trim().length() - 1);
 				try {
+
+					isProposer = true;
 					double value = Double.parseDouble(valueString);
 					// start proposal with currentBallot and currentOperation
 					currentOperation = new LinkedList<LogEntry>();
@@ -788,8 +789,11 @@ public class Server {
 				String valueString = withdrawCommand[1].trim().substring(0,
 						withdrawCommand[1].trim().length() - 1);
 				try {
+
+					isProposer = true;
 					double value = Double.parseDouble(valueString);
 					if (balance - value < 0) {
+						
 						notifyTerminal(false);
 						break;
 					}
