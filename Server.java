@@ -11,7 +11,7 @@ public class Server {
 	final static int TOTAL_SERVER = 3;
 	final static int MAJORITY = TOTAL_SERVER / 2 + 1;
 	final static long TRANSACTION_TIMEOUT = 1000 * 4800;
-	final static long ACKWAIT_TIMEOUT = 1000 * 120;
+	final static long ACKWAIT_TIMEOUT = 1000*120;
 	State state;
 
 	enum State {
@@ -45,7 +45,6 @@ public class Server {
 	List<LogEntry> nextOperation = null;
 
 	public Server(int serverNo) throws IOException {
-		mode = true;
 		sequenceNo = 0;
 		this.serverNo = serverNo;
 		state = State.STATE_START;
@@ -73,6 +72,7 @@ public class Server {
 		// read in log
 		log = new Log();
 		balance = log.getBalance();
+		mode = true;
 	}
 
 	private boolean hasMessage() {
@@ -272,7 +272,7 @@ public class Server {
 						// check how many confirm Message that has ballot that
 						// is the
 						// same as the currentBallot
-						if (confirmList.size() < TOTAL_SERVER  - 1 && waitTimer.getTime() < ACKWAIT_TIMEOUT) {
+						if (confirmList.size() < TOTAL_SERVER  - 1&& waitTimer.getTime() < ACKWAIT_TIMEOUT) {
 							break;
 						}
 						waitTimer.turnOff();
@@ -316,12 +316,9 @@ public class Server {
 								acceptCount = 1;
 								state = State.STATE_PROPOSER_ACCEPT;
 							}
-							
-							else if (confirmList.size() >= MAJORITY - 1){
+								
+							else if (confirmList.size() >= MAJORITY - 1){	 
 								List<LogEntry> maxBallotOperation = selectOperation();
-								if (maxBallotOperation != null) {
-									notifyTerminal(false);
-								}
 									acceptRequest = new AcceptMessage(
 											MessageType.ACCEPT, serverNo,
 											Messenger.BROADCAST, currentBallot,
@@ -462,13 +459,16 @@ public class Server {
 					PrepareMessage prepareMessage = (PrepareMessage) message;
 
 					if (currentBallot.compareTo(prepareMessage.getBallot()) < 0) {
+						notifyTerminal(false);
+
 						Message reply = new ConfirmMessage(MessageType.CONFIRM,
 								serverNo, message.getSender(),
 								prepareMessage.getBallot(), currentBallot,
 								currentOperation);
 						currentBallot = prepareMessage.getBallot();
+						acceptCount = 0;
 						messenger.sendMessage(reply);
-						acceptCount = 1;
+						state = State.STATE_CONFIRM;
 					}
 					break;
 				case DECIDE:
@@ -482,8 +482,7 @@ public class Server {
 				case ACCEPT:
 					AcceptMessage acceptMessage = (AcceptMessage) message;
 					if (currentBallot.compareTo(acceptMessage.getBallot()) < 0) {
-						if (!compareLists(currentOperation, acceptMessage.getAcceptLog()))
-							notifyTerminal(false);
+						notifyTerminal(false);
 						acceptCount = 1;
 						state = State.STATE_ACCEPTOR_ACCEPT;
 						currentBallot = acceptMessage.getBallot();
@@ -533,6 +532,7 @@ public class Server {
 				case PREPARE:
 					PrepareMessage prepareMessage = (PrepareMessage) message;
 					if (currentBallot.compareTo(prepareMessage.getBallot()) < 0) {
+
 						Message reply = new ConfirmMessage(MessageType.CONFIRM,
 								serverNo, message.getSender(),
 								prepareMessage.getBallot(), currentBallot,
@@ -661,9 +661,8 @@ public class Server {
 	private Message getMessage() {
 		Message message = null;
 		synchronized (this) {
-			if (recvMessageList == null) return null;
-			if (!recvMessageList.isEmpty())
-				System.out.println("message buffer: " + recvMessageList.get(0));
+			if (recvMessageList!=null && !recvMessageList.isEmpty())
+				
 				message = recvMessageList.remove(0);
 		}
 		return message;

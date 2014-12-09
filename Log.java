@@ -67,7 +67,7 @@ public class Log {
 	public boolean checkOperations(List<LogEntry> list){
 		for(LogEntry entry : list) {
 			int targetPos = entry.getLogPosition();
-			if (targetPos > list.size() - 1) continue;
+			if (targetPos > logs.size() - 1) continue;
 			for (int i = targetPos; i < logs.size(); i ++) {
 				if (logs.get(i).compareTo(logs.get(i)) == 0)
 					return true;
