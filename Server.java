@@ -18,7 +18,7 @@ public class Server {
 	enum State {
 		STATE_START, STATE_TIMEOUT, STATE_CONFIRM, STATE_PREPARE, STATE_PROPOSER_ACCEPT, STATE_DECIDE, STATE_ACCEPTOR_ACCEPT
 	}
-
+	boolean isProposer;
 	Log log;
 	int serverNo;
 	List<LogEntry> currentOperation;
@@ -313,7 +313,7 @@ public class Server {
 						break;
 
 					default:
-						System.out.println("Undefined Message!");
+						//System.out.println("Undefined Message!");
 					}
 				}
 			}
@@ -379,7 +379,7 @@ public class Server {
 						appendSynAck(message);
 					break;
 				default:
-					System.out.println("Undefined Message!");
+					//System.out.println("Undefined Message!");
 				}
 			}
 			break;
@@ -525,13 +525,13 @@ public class Server {
 						appendSynAck(message);
 					break;
 				default:
-					System.out.println("Undefined Message!");
+					//System.out.println("Undefined Message!");
 				}
 			}
 			break;
 		default:
-			System.out.println("STATE: " + state);
-			System.out.println("Undefined State!");
+			//System.out.println("STATE: " + state);
+			//System.out.println("Undefined State!");
 		}
 		if ((nextOperation = getCommand()) != null) {
 			state = State.STATE_PREPARE;
@@ -675,12 +675,15 @@ public class Server {
 	}
 
 	public void notifyTerminal(boolean success) {
-		String indicator = success ? "SUCCEED" : "FAIL";
+		String indicator = success ? "SUCCESS" : "FAILURE";
 		if (userTimer != null)
 			userTimer.cancel();
 		if (waitTimer != null)
 			waitTimer.cancel();
-		System.out.println("The Last Operation " + currentOperation + indicator);
+		//System.out.println("The Last Operation " + currentOperation + indicator);
+		if (isProposer)
+			System.out.println(indicator);
+		isProposer = false;
 		currentBallot = null;
 		currentOperation = null;
 		confirmList.clear();
@@ -759,6 +762,8 @@ public class Server {
 				String valueString = depositCommand[1].trim().substring(0,
 						depositCommand[1].trim().length() - 1);
 				try {
+
+					isProposer = true;
 					double value = Double.parseDouble(valueString);
 					// start proposal with currentBallot and currentOperation
 					currentOperation = new LinkedList<LogEntry>();
@@ -784,8 +789,11 @@ public class Server {
 				String valueString = withdrawCommand[1].trim().substring(0,
 						withdrawCommand[1].trim().length() - 1);
 				try {
+
+					isProposer = true;
 					double value = Double.parseDouble(valueString);
 					if (balance - value < 0) {
+						
 						notifyTerminal(false);
 						break;
 					}
@@ -822,7 +830,7 @@ public class Server {
 					System.out.println("get Balance ");
 					System.out.println(balance);
 				} else
-					System.out.println("unsynchronized");
+					System.out.println("FAILURE");
 			} else {
 				handleInvalidInput();
 			}
@@ -832,8 +840,8 @@ public class Server {
 				serverSwitch = true;
 				state = State.STATE_START;
 				recvMessageList.clear();
-				startSynchronization();				
-				System.out.println("unfail the server");
+				//startSynchronization();				
+				System.out.println("UNFAILED");
 			} else {
 				handleInvalidInput();
 			}
