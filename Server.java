@@ -18,7 +18,7 @@ public class Server {
 	enum State {
 		STATE_START, STATE_TIMEOUT, STATE_CONFIRM, STATE_PREPARE, STATE_PROPOSER_ACCEPT, STATE_DECIDE, STATE_ACCEPTOR_ACCEPT
 	}
-	boolean isProposer;
+
 	Log log;
 	int serverNo;
 	List<LogEntry> currentOperation;
@@ -675,15 +675,12 @@ public class Server {
 	}
 
 	public void notifyTerminal(boolean success) {
-		String indicator = success ? "SUCCESS" : "FAILURE";
+		String indicator = success ? "SUCCEED" : "FAIL";
 		if (userTimer != null)
 			userTimer.cancel();
 		if (waitTimer != null)
 			waitTimer.cancel();
-		//System.out.println("The Last Operation " + currentOperation + indicator);
-		if (isProposer)
-			System.out.println(indicator);
-		isProposer = false;
+		System.out.println("The Last Operation " + currentOperation + indicator);
 		currentBallot = null;
 		currentOperation = null;
 		confirmList.clear();
@@ -762,8 +759,6 @@ public class Server {
 				String valueString = depositCommand[1].trim().substring(0,
 						depositCommand[1].trim().length() - 1);
 				try {
-
-					isProposer = true;
 					double value = Double.parseDouble(valueString);
 					// start proposal with currentBallot and currentOperation
 					currentOperation = new LinkedList<LogEntry>();
@@ -789,11 +784,8 @@ public class Server {
 				String valueString = withdrawCommand[1].trim().substring(0,
 						withdrawCommand[1].trim().length() - 1);
 				try {
-
-					isProposer = true;
 					double value = Double.parseDouble(valueString);
 					if (balance - value < 0) {
-						
 						notifyTerminal(false);
 						break;
 					}
