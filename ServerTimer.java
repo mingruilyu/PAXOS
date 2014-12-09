@@ -2,32 +2,42 @@ package server;
 
 import java.util.Timer;
 import java.util.TimerTask;
-
+class Notification {
+	
+	boolean notification;
+	Notification(boolean notification) {
+		this.notification = notification;
+	}
+}
 public class ServerTimer {
 	private Timer timer;
-	Boolean notification;
+	Notification notification;
 	public void cancel() {
 		timer.cancel();
 	}
 	ServerTimer(Server server, long expireTime, boolean notify) {
 		timer = new Timer(true);
-		timer.schedule(new TimerAction(server, notification, notify), expireTime);
-		notification = new Boolean(false);
+		TimerAction action = new TimerAction(server, notify);
+		timer.schedule(action, expireTime);
+		notification = action.getNotification();
 	}	
 }
 
 class TimerAction extends TimerTask {
 	private Server server;
-	private Boolean notification;
+	private Notification notification;
 	private boolean notify;
-	public TimerAction(Server server, Boolean notification, boolean notify) {
+	public Notification getNotification() {
+		return notification;
+	}
+	public TimerAction(Server server, boolean notify) {
 		this.server = server;
-		this.notification = notification;
+		this.notification = new Notification(false);
 		this.notify = notify;
 	}
 	@Override
 	public void run() {
-		notification = true;
+		notification.notification = true;
 		if (notify) {
 			System.out.println("USERTIMER TIMEOUT");
 			server.notifyTerminal(false);

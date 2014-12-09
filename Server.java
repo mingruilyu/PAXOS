@@ -11,7 +11,7 @@ import java.util.Timer;
 public class Server {
 	final static int TOTAL_SERVER = 3;
 	final static int MAJORITY = TOTAL_SERVER / 2 + 1;
-	final static long TRANSACTION_TIMEOUT = 5000;
+	final static long TRANSACTION_TIMEOUT = 500000;
 	final static long ACKWAIT_TIMEOUT = 1000;
 	State state;
 
@@ -216,7 +216,7 @@ public class Server {
 			}
 			break;
 		case STATE_PREPARE:
-			if (userTimer.notification) {
+			if (userTimer.notification.notification) {
 				// no accept request has been sent
 				notifyTerminal(false);
 				state = State.STATE_START;
@@ -225,6 +225,11 @@ public class Server {
 				}
 				break;
 			} else {
+				if (waitTimer != null && waitTimer.notification.notification) {
+					waitTimer.cancel();
+					waitTimer = null;
+					checkConfirm();
+				}
 				if (message != null) {
 					System.out.println("STATE: " + state);
 					System.out.println("MESSAGE: " + message.translate());
@@ -271,74 +276,9 @@ public class Server {
 						// check how many confirm Message that has ballot that
 						// is the
 						// same as the currentBallot
-						if (confirmList.size() < TOTAL_SERVER  - 1 && !waitTimer.notification) {
-							break;
-						}
-						if(waitTimer!=null) {
-							waitTimer.cancel();
-							waitTimer = null;
-						}
-						boolean nullFlag = true;
-						for (int i = 0; i < confirmList.size(); i ++) {
-							if(confirmList.get(i).getValue() != null)
-								nullFlag = false;
-						}
-						Message acceptRequest = null;
-						if (nullFlag) {
-							acceptRequest = new AcceptMessage(
-									MessageType.ACCEPT, serverNo,
-									Messenger.BROADCAST, currentBallot,
-									currentOperation);
-
-							acceptCount = 1;
-							state = State.STATE_PROPOSER_ACCEPT;
-						}
-						else {
-							int[] entryMap = {1, 0, 0, 0, 0};
-							for(int i = 1; i < confirmList.size(); i ++){
-								for(int j = 0; j < i; j ++) {
-									if (compareLists(confirmList.get(i).getValue(), confirmList.get(j).getValue()))
-										entryMap[j] ++;
-									else entryMap[i] = 1;
-								}
-							}
-							int maxPos = 0;
-							for (int i = 0; i < entryMap.length; i ++){
-								if (entryMap[i] > entryMap[maxPos]) {
-									maxPos = i;
-								}
-							}
-							if(!mode && entryMap[maxPos] + TOTAL_SERVER - confirmList.size() <= TOTAL_SERVER / 2){
-								generateCombinedValue(confirmList.get(maxPos).getValue());
-								acceptRequest = new AcceptMessage(
-										MessageType.ACCEPT, serverNo,
-										Messenger.BROADCAST, currentBallot,
-										currentOperation);
-
-								acceptCount = 1;
-								state = State.STATE_PROPOSER_ACCEPT;
-							}
-								
-							else if (confirmList.size() >= MAJORITY - 1){	 
-								List<LogEntry> maxBallotOperation = selectOperation();
-									acceptRequest = new AcceptMessage(
-											MessageType.ACCEPT, serverNo,
-											Messenger.BROADCAST, currentBallot,
-											maxBallotOperation);
-									currentOperation = maxBallotOperation;
-
-									acceptCount = 1;
-									state = State.STATE_PROPOSER_ACCEPT;
-							}
-							else {
-								notifyTerminal(false);
-								state = State.STATE_START;
-							}
-
-						}
-						// help with propagation of the other proposal
-						if (acceptRequest != null)
-							messenger.sendMessage(acceptRequest);
+						if (confirmList.size() < TOTAL_SERVER  - 1) break;
+						else 
+							checkConfirm();
 						break;
 					case ACCEPT:
 						AcceptMessage acceptMessage = (AcceptMessage) message;
@@ -597,6 +537,69 @@ public class Server {
 		}
 	}
 
+	private void checkConfirm() throws UnknownHostException, IOException {
+		boolean nullFlag = true;
+		for (int i = 0; i < confirmList.size(); i ++) {
+			if(confirmList.get(i).getValue() != null)
+				nullFlag = false;
+		}
+		Message acceptRequest = null;
+		if (nullFlag) {
+			acceptRequest = new AcceptMessage(
+					MessageType.ACCEPT, serverNo,
+					Messenger.BROADCAST, currentBallot,
+					currentOperation);
+
+			acceptCount = 1;
+			state = State.STATE_PROPOSER_ACCEPT;
+		}
+		else {
+			int[] entryMap = {1, 0, 0, 0, 0};
+			for(int i = 1; i < confirmList.size(); i ++){
+				for(int j = 0; j < i; j ++) {
+					if (compareLists(confirmList.get(i).getValue(), confirmList.get(j).getValue()))
+						entryMap[j] ++;
+					else entryMap[i] = 1;
+				}
+			}
+			int maxPos = 0;
+			for (int i = 0; i < entryMap.length; i ++){
+				if (entryMap[i] > entryMap[maxPos]) {
+					maxPos = i;
+				}
+			}
+			if(!mode && entryMap[maxPos] + TOTAL_SERVER - confirmList.size() <= TOTAL_SERVER / 2){
+				generateCombinedValue(confirmList.get(maxPos).getValue());
+				acceptRequest = new AcceptMessage(
+						MessageType.ACCEPT, serverNo,
+						Messenger.BROADCAST, currentBallot,
+						currentOperation);
+
+				acceptCount = 1;
+				state = State.STATE_PROPOSER_ACCEPT;
+			}
+				
+			else if (confirmList.size() >= MAJORITY - 1){	 
+				List<LogEntry> maxBallotOperation = selectOperation();
+					acceptRequest = new AcceptMessage(
+							MessageType.ACCEPT, serverNo,
+							Messenger.BROADCAST, currentBallot,
+							maxBallotOperation);
+					currentOperation = maxBallotOperation;
+
+					acceptCount = 1;
+					state = State.STATE_PROPOSER_ACCEPT;
+			}
+			else {
+				notifyTerminal(false);
+				state = State.STATE_START;
+			}
+
+		}
+		// help with propagation of the other proposal
+		if (acceptRequest != null)
+			messenger.sendMessage(acceptRequest);
+	}
 	private void appendSynAck(Message message2) {
 		SyncAckMessage synAckMessage = (SyncAckMessage) message;
 		for(LogEntry e:synAckMessage.recentLog)
