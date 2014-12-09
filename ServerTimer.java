@@ -23,11 +23,12 @@ class TimerAction extends TimerTask {
 	public TimerAction(Server server, Boolean notification, boolean notify) {
 		this.server = server;
 		this.notification = notification;
+		this.notify = notify;
 	}
 	@Override
 	public void run() {
 		notification = true;
-		if (notify == true) {
+		if (notify) {
 			server.notifyTerminal(false);
 			server.state = Server.State.STATE_START;
 		}
