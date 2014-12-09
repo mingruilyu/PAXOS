@@ -215,7 +215,7 @@ public class Server {
 					break;
 				
 				default:
-					System.out.println("Redundant Message!");
+					//System.out.println("Redundant Message!");
 				}
 			}
 			break;
@@ -307,11 +307,10 @@ public class Server {
 					case SYNC_REQ:
 						sendSynAck(message);
 						break;
-					case SYNC_ACK:
+					/*case SYNC_ACK:
 						if(!syncFlag)
 							appendSynAck(message);
-						break;
-
+						break;*/
 					default:
 						//System.out.println("Undefined Message!");
 					}
@@ -374,10 +373,10 @@ public class Server {
 				case SYNC_REQ:
 					sendSynAck(message);
 					break;
-				case SYNC_ACK:
+				/*case SYNC_ACK:
 					if(!syncFlag)
 						appendSynAck(message);
-					break;
+					break;*/
 				default:
 					//System.out.println("Undefined Message!");
 				}
@@ -450,12 +449,12 @@ public class Server {
 				case SYNC_REQ:
 					sendSynAck(message);
 					break;
-				case SYNC_ACK:
+				/*case SYNC_ACK:
 					if(!syncFlag)
 						appendSynAck(message);
-					break;
+					break;*/
 				default:
-					System.out.println("Redundant Message!");
+					//System.out.println("Redundant Message!");
 				}
 			}
 			break;
@@ -520,10 +519,10 @@ public class Server {
 				case SYNC_REQ:
 					sendSynAck(message);
 					break;
-				case SYNC_ACK:
+				/*case SYNC_ACK:
 					if(!syncFlag)
 						appendSynAck(message);
-					break;
+					break;*/
 				default:
 					//System.out.println("Undefined Message!");
 				}
@@ -609,7 +608,6 @@ public class Server {
 			log.appendLogEntry(e);
 		updateBalance(synAckMessage.getRecentLog());
 		syncFlag = true;
-		
 	}
 	
 	private void generateCombinedValue(List<LogEntry> votedValue) {
@@ -770,7 +768,7 @@ public class Server {
 					currentOperation.add(new LogEntry("deposit", value,
 							log.getLogPosition(), serverNo, sequenceNo++));
 					if (!syncFlag)
-						System.out.println("Unsynchronized!");
+						System.out.println("UNSYNCHRONIZED");
 					else {
 						return currentOperation;
 						// startProposal();
@@ -802,7 +800,7 @@ public class Server {
 					currentOperation.add(new LogEntry("withdraw", value,
 							log.getLogPosition(), serverNo, sequenceNo++));
 					if (!syncFlag)
-						System.out.println("Unsynchronized!");
+						System.out.println("UNSYNCHRONIZED!");
 					else {
 						return currentOperation;
 						// startProposal();
@@ -819,7 +817,13 @@ public class Server {
 			if (s.equals("fail()")) {
 				syncFlag = false;
 				serverSwitch = false;
-				System.out.println("fail the server");
+				state = State.STATE_START;
+				confirmList.clear();
+				acceptCount = 0;
+				isProposer = false;
+				currentOperation = null;
+				currentBallot = null;
+				System.out.println("FAILED");
 			} else
 				handleInvalidInput();
 
@@ -830,7 +834,7 @@ public class Server {
 					System.out.println("get Balance ");
 					System.out.println(balance);
 				} else
-					System.out.println("FAILURE");
+					System.out.println("UNSYNCHRONIZED!");
 			} else {
 				handleInvalidInput();
 			}

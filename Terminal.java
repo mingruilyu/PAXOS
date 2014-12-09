@@ -25,7 +25,7 @@ public class Terminal extends Thread {
 			try {
 				synchronized(this) {
 					command = br.readLine();
-					System.out.println(command);
+					//System.out.println(command);
 				}
 				synchronized(lock) {
 					lock.notify();
