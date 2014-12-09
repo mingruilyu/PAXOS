@@ -1,22 +1,32 @@
 package server;
 
+import java.util.Timer;
+import java.util.TimerTask;
+
 public class ServerTimer {
-	long startTime;
-	boolean switchTimer;
-	public boolean isOn() {
-		return switchTimer;
+	private Timer timer;
+	Boolean notification;
+	public void cancel() {
+		timer.cancel();
 	}
-	public void turnOn() {
-		switchTimer = true;
+	ServerTimer(Server server, long expireTime) {
+		timer = new Timer(true);
+		timer.schedule(new TimerAction(server, notification), expireTime);
+		notification = new Boolean(false);
+	}	
+}
+
+class TimerAction extends TimerTask {
+	private Server server;
+	private Boolean notification;
+	public TimerAction(Server server, Boolean notification) {
+		this.server = server;
+		this.notification = notification;
 	}
-	public void turnOff() {
-		switchTimer = false;
+	@Override
+	public void run() {
+		notification = true;
+		server.notifyTerminal(false);
 	}
-	public void resetTimer() {
-		startTime = System.currentTimeMillis();
-	}
-	public long getTime() {
-		long time = System.currentTimeMillis() - startTime;
-		return time;
-	}
+	
 }

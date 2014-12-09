@@ -6,12 +6,13 @@ import java.io.InputStreamReader;
 import java.net.UnknownHostException;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Timer;
 
 public class Server {
 	final static int TOTAL_SERVER = 3;
 	final static int MAJORITY = TOTAL_SERVER / 2 + 1;
 	final static long TRANSACTION_TIMEOUT = 1000 * 4800;
-	final static long ACKWAIT_TIMEOUT = 1000*120;
+	final static long ACKWAIT_TIMEOUT = 1000;
 	State state;
 
 	enum State {
@@ -25,7 +26,6 @@ public class Server {
 	boolean syncFlag;
 	ServerTimer userTimer;
 	ServerTimer waitTimer;
-	Boolean notifycation;
 	double balance;
 	int sequenceNo;
 
@@ -52,8 +52,6 @@ public class Server {
 		serverSwitch = true;
 		currentOperation = null;
 		currentBallot = null;
-		userTimer = new ServerTimer();
-		waitTimer = new ServerTimer();
 		// initialize messagelist, confirmlist
 		command = null;
 		recvMessageList = new LinkedList<Message>();
@@ -218,7 +216,7 @@ public class Server {
 			}
 			break;
 		case STATE_PREPARE:
-			if (userTimer.isOn() && userTimer.getTime() > TRANSACTION_TIMEOUT) {
+			if (userTimer.notification) {
 				// no accept request has been sent
 				notifyTerminal(false);
 				state = State.STATE_START;
@@ -260,6 +258,7 @@ public class Server {
 							//break;
 						DecideMessage decideMessage = (DecideMessage) message;
 						currentOperation = decideMessage.getValue();
+						notifyTerminal(false);
 						makeDecision(decideMessage.getValue());
 						state = State.STATE_START;
 						break;
@@ -272,10 +271,10 @@ public class Server {
 						// check how many confirm Message that has ballot that
 						// is the
 						// same as the currentBallot
-						if (confirmList.size() < TOTAL_SERVER  - 1&& waitTimer.getTime() < ACKWAIT_TIMEOUT) {
+						if (confirmList.size() < TOTAL_SERVER  - 1 && !waitTimer.notification) {
 							break;
 						}
-						waitTimer.turnOff();
+						
 						boolean nullFlag = true;
 						for (int i = 0; i < confirmList.size(); i ++) {
 							if(confirmList.get(i).getValue() != null)
@@ -438,12 +437,8 @@ public class Server {
 			}
 			break;
 		case STATE_PROPOSER_ACCEPT:
-			if (userTimer.isOn() && userTimer.getTime() > TRANSACTION_TIMEOUT) {
-				notifyTerminal(false);
-				synchronized (this) {
+			synchronized (this) {
 					recvMessageList.add(0, message); // no message consume
-				}
-				break;
 			}
 			if (message != null) {
 				System.out.println("STATE: " + state);
@@ -476,6 +471,8 @@ public class Server {
 						//break;
 					DecideMessage decideMessage = (DecideMessage) message;
 					currentOperation = decideMessage.getValue();
+					if (!compareLists(currentOperation, decideMessage.getValue()))
+						notifyTerminal(false);
 					makeDecision(decideMessage.getValue());
 					state = State.STATE_START;
 					break;
@@ -668,9 +665,10 @@ public class Server {
 		return message;
 	}
 
-	private void notifyTerminal(boolean success) {
+	public void notifyTerminal(boolean success) {
 		String indicator = success ? "SUCCEED" : "FAIL";
-		userTimer.turnOff();
+		userTimer.cancel();
+		waitTimer.cancel();
 		System.out
 				.println("The Last Operation " + currentOperation + indicator);
 		currentBallot = null;
@@ -688,6 +686,8 @@ public class Server {
 		Message newProposal = new PrepareMessage(MessageType.PREPARE, serverNo,
 				Messenger.BROADCAST, currentBallot);
 		confirmList.clear();
+		userTimer = new ServerTimer(this, TRANSACTION_TIMEOUT);
+		waitTimer = new ServerTimer(this, ACKWAIT_TIMEOUT);
 		//confirmList.add(new ConfirmMessage(MessageType.CONFIRM, serverNo,
 			//	this.serverNo, this.currentBallot, null, null));
 		acceptCount = 0;
@@ -741,10 +741,6 @@ public class Server {
 			return null;
 		String command = s.trim().toLowerCase();
 		char firstChar = command.charAt(0);
-		userTimer.turnOn();
-		userTimer.resetTimer();
-		waitTimer.turnOn();
-		waitTimer.resetTimer();
 		switch (firstChar) {
 		case 'd':
 			String[] depositCommand = command.split("\\(");
@@ -779,6 +775,10 @@ public class Server {
 						withdrawCommand[1].trim().length() - 1);
 				try {
 					double value = Double.parseDouble(valueString);
+					if (balance - value < 0) {
+						notifyTerminal(false);
+						break;
+					}
 					// start proposal with currentBallot and currentOperation
 					currentOperation = new LinkedList<LogEntry>();
 					currentOperation.add(new LogEntry("withdraw", value,
