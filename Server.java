@@ -11,7 +11,7 @@ import java.util.Timer;
 public class Server {
 	final static int TOTAL_SERVER = 3;
 	final static int MAJORITY = TOTAL_SERVER / 2 + 1;
-	final static long TRANSACTION_TIMEOUT = 1000 * 4800;
+	final static long TRANSACTION_TIMEOUT = 5000;
 	final static long ACKWAIT_TIMEOUT = 1000;
 	State state;
 
@@ -274,7 +274,7 @@ public class Server {
 						if (confirmList.size() < TOTAL_SERVER  - 1 && !waitTimer.notification) {
 							break;
 						}
-						
+						waitTimer.cancel();
 						boolean nullFlag = true;
 						for (int i = 0; i < confirmList.size(); i ++) {
 							if(confirmList.get(i).getValue() != null)
@@ -669,8 +669,7 @@ public class Server {
 		String indicator = success ? "SUCCEED" : "FAIL";
 		userTimer.cancel();
 		waitTimer.cancel();
-		System.out
-				.println("The Last Operation " + currentOperation + indicator);
+		System.out.println("The Last Operation " + currentOperation + indicator);
 		currentBallot = null;
 		currentOperation = null;
 		confirmList.clear();
@@ -686,8 +685,8 @@ public class Server {
 		Message newProposal = new PrepareMessage(MessageType.PREPARE, serverNo,
 				Messenger.BROADCAST, currentBallot);
 		confirmList.clear();
-		userTimer = new ServerTimer(this, TRANSACTION_TIMEOUT);
-		waitTimer = new ServerTimer(this, ACKWAIT_TIMEOUT);
+		userTimer = new ServerTimer(this, TRANSACTION_TIMEOUT, true);
+		waitTimer = new ServerTimer(this, ACKWAIT_TIMEOUT, false);
 		//confirmList.add(new ConfirmMessage(MessageType.CONFIRM, serverNo,
 			//	this.serverNo, this.currentBallot, null, null));
 		acceptCount = 0;
