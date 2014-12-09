@@ -274,7 +274,8 @@ public class Server {
 						if (confirmList.size() < TOTAL_SERVER  - 1 && !waitTimer.notification) {
 							break;
 						}
-						waitTimer.cancel();
+						if(waitTimer!=null)
+							waitTimer.cancel();
 						boolean nullFlag = true;
 						for (int i = 0; i < confirmList.size(); i ++) {
 							if(confirmList.get(i).getValue() != null)
@@ -667,8 +668,10 @@ public class Server {
 
 	public void notifyTerminal(boolean success) {
 		String indicator = success ? "SUCCEED" : "FAIL";
-		userTimer.cancel();
-		waitTimer.cancel();
+		if (userTimer != null)
+			userTimer.cancel();
+		if (waitTimer != null)
+			waitTimer.cancel();
 		System.out.println("The Last Operation " + currentOperation + indicator);
 		currentBallot = null;
 		currentOperation = null;
