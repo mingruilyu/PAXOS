@@ -11,8 +11,8 @@ import java.util.Timer;
 public class Server {
 	final static int TOTAL_SERVER = 5;
 	final static int MAJORITY = TOTAL_SERVER / 2 + 1;
-	final static long TRANSACTION_TIMEOUT = 5000;
-	final static long ACKWAIT_TIMEOUT = 1000;
+	final static long TRANSACTION_TIMEOUT = 10000;
+	final static long ACKWAIT_TIMEOUT = 5000;
 	State state;
 
 	enum State {
