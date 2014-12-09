@@ -44,7 +44,7 @@ public class Server {
 	Message message = null;
 	List<LogEntry> nextOperation = null;
 
-	public Server(int serverNo) throws IOException {
+	public Server(int serverNo, boolean mode) throws IOException {
 		sequenceNo = 0;
 		this.serverNo = serverNo;
 		state = State.STATE_START;
@@ -70,7 +70,7 @@ public class Server {
 		// read in log
 		log = new Log();
 		balance = log.getBalance();
-		mode = false;
+		this.mode = mode;
 	}
 
 	private boolean hasMessage() {
@@ -91,15 +91,19 @@ public class Server {
 
 	public static void main(String[] args) throws IOException {
 		Server server;
+		boolean mode;
 		String serverNumberString = null;
-		if (args.length == 1) {
+		if (args.length == 2) {
 			serverNumberString = args[0];
+			if (args[1].toLowerCase().equals("paxos"))
+				mode = true;
+			else mode = false;
 		}
 		while (true) {
 			if (serverNumberString != null) {
 				try {
 					int value = Integer.parseInt(serverNumberString);
-					server = new Server(value);
+					server = new Server(value, mode);
 					break;
 				} catch (NumberFormatException ex) {
 					serverNumberString = getCorrestInput();
