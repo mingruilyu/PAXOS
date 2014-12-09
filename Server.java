@@ -165,16 +165,16 @@ public class Server {
 		switch (state) {
 		case STATE_START:
 			if (message != null) {
-				System.out.println("STATE: " + state);
-				System.out.println("MESSAGE: " + message.translate());
-				System.out.println("ACCEPTCOUNT: " + acceptCount);
+				/*//System.out.println("STATE: " + state);
+				//System.out.println("MESSAGE: " + message.translate());
+				//System.out.println("ACCEPTCOUNT: " + acceptCount);
 				if (currentBallot != null)
 					System.out.println("CURRENTBALLOT: "
 							+ currentBallot.toString());
 				else
 					System.out.println("CURRENTBALLOT: " + "NULL");
-				System.out.println("CURRENTVAL: " + currentOperation);
-				System.out.println("CONFIRMLIST" + confirmList.size());
+				//System.out.println("CURRENTVAL: " + currentOperation);
+				//System.out.println("CONFIRMLIST" + confirmList.size());*/
 				switch (message.getType()) {
 				case ACCEPT:
 					AcceptMessage acceptMessage = (AcceptMessage) message;
@@ -235,7 +235,7 @@ public class Server {
 					checkConfirm();
 				}
 				if (message != null) {
-					System.out.println("STATE: " + state);
+					/*System.out.println("STATE: " + state);
 					System.out.println("MESSAGE: " + message.translate());
 					System.out.println("ACCEPTCOUNT: " + acceptCount);
 					if (currentBallot != null)
@@ -244,7 +244,7 @@ public class Server {
 					else
 						System.out.println("CURRENTBALLOT: " + "NULL");
 					System.out.println("CURRENTVAL: " + currentOperation);
-					System.out.println("CONFIRMLIST" + confirmList.size());
+					System.out.println("CONFIRMLIST" + confirmList.size());*/
 
 					switch (message.getType()) {
 					case PREPARE:
@@ -320,7 +320,7 @@ public class Server {
 			break;
 		case STATE_CONFIRM:
 			if (message != null) {
-				System.out.println("STATE: " + state);
+				/*System.out.println("STATE: " + state);
 				System.out.println("MESSAGE: " + message.translate());
 				System.out.println("ACCEPTCOUNT: " + acceptCount);
 				if (currentBallot != null)
@@ -329,7 +329,7 @@ public class Server {
 				else
 					System.out.println("CURRENTBALLOT: " + "NULL");
 				System.out.println("CURRENTVAL: " + currentOperation);
-				System.out.println("CONFIRMLIST" + confirmList.size());
+				System.out.println("CONFIRMLIST" + confirmList.size());*/
 
 				switch (message.getType()) {
 				case DECIDE:
@@ -388,13 +388,13 @@ public class Server {
 				recvMessageList.add(0, message); // no message consume
 			}*/
 			if (message != null) {
-				System.out.println("STATE: " + state);
+				/*System.out.println("STATE: " + state);
 				System.out.println("MESSAGE: " + message.translate());
 				System.out.println("ACCEPTCOUNT: " + acceptCount);
 				System.out
 						.println("CURRENTBALLOT: " + currentBallot.toString());
 				System.out.println("CURRENTVAL: " + currentOperation);
-				System.out.println("CONFIRMLIST" + confirmList.size());
+				System.out.println("CONFIRMLIST" + confirmList.size());*/
 
 				switch (message.getType()) {
 				case PREPARE:
@@ -461,7 +461,7 @@ public class Server {
 			break;
 		case STATE_ACCEPTOR_ACCEPT:
 			if (message != null) {
-				System.out.println("STATE: " + state);
+				/*System.out.println("STATE: " + state);
 				System.out.println("MESSAGE: " + message.translate());
 				System.out.println("ACCEPTCOUNT: " + acceptCount);
 				if (currentBallot != null)
@@ -470,7 +470,7 @@ public class Server {
 				else
 					System.out.println("CURRENTBALLOT: " + "NULL");
 				System.out.println("CURRENTVAL: " + currentOperation);
-				System.out.println("CONFIRMLIST" + confirmList.size());
+				System.out.println("CONFIRMLIST" + confirmList.size());*/
 
 				switch (message.getType()) {
 				case PREPARE:
