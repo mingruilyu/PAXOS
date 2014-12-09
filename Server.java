@@ -91,7 +91,7 @@ public class Server {
 
 	public static void main(String[] args) throws IOException {
 		Server server;
-		boolean mode;
+		boolean mode = true;
 		String serverNumberString = null;
 		if (args.length == 2) {
 			serverNumberString = args[0];
