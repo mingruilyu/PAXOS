@@ -603,6 +603,8 @@ public class Server {
 			messenger.sendMessage(acceptRequest);
 	}
 	private void appendSynAck(Message message2) {
+		//System.out.println("about to sync");
+		//System.out.println(message.translate());
 		SyncAckMessage synAckMessage = (SyncAckMessage) message;
 		for(LogEntry e:synAckMessage.recentLog)
 			log.appendLogEntry(e);
@@ -630,6 +632,8 @@ public class Server {
 	
 
 	private void sendSynAck(Message message) throws IOException {
+	//	System.out.println("about to send sync");
+		//System.out.println(message.translate());
 		SyncReqMessage synReqMessage = (SyncReqMessage) message;
 		int logLength = synReqMessage.logLength;
 		List<LogEntry> recentLogs = new LinkedList<LogEntry>();
@@ -844,7 +848,7 @@ public class Server {
 				serverSwitch = true;
 				state = State.STATE_START;
 				recvMessageList.clear();
-				//startSynchronization();				
+				startSynchronization();				
 				System.out.println("UNFAILED");
 			} else {
 				handleInvalidInput();
