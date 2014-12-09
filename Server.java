@@ -11,7 +11,7 @@ import java.util.Timer;
 public class Server {
 	final static int TOTAL_SERVER = 3;
 	final static int MAJORITY = TOTAL_SERVER / 2 + 1;
-	final static long TRANSACTION_TIMEOUT = 500000;
+	final static long TRANSACTION_TIMEOUT = 50000;
 	final static long ACKWAIT_TIMEOUT = 1000;
 	State state;
 
@@ -380,9 +380,9 @@ public class Server {
 			}
 			break;
 		case STATE_PROPOSER_ACCEPT:
-			synchronized (this) {
-					recvMessageList.add(0, message); // no message consume
-			}
+			/*synchronized (this) {
+				recvMessageList.add(0, message); // no message consume
+			}*/
 			if (message != null) {
 				System.out.println("STATE: " + state);
 				System.out.println("MESSAGE: " + message.translate());
@@ -545,9 +545,8 @@ public class Server {
 		}
 		Message acceptRequest = null;
 		if (nullFlag) {
-			acceptRequest = new AcceptMessage(
-					MessageType.ACCEPT, serverNo,
-					Messenger.BROADCAST, currentBallot,
+			acceptRequest = new AcceptMessage(MessageType.ACCEPT, serverNo,
+											  Messenger.BROADCAST, currentBallot,
 					currentOperation);
 
 			acceptCount = 1;
