@@ -70,7 +70,7 @@ public class Server {
 		// read in log
 		log = new Log();
 		balance = log.getBalance();
-		mode = true;
+		mode = false;
 	}
 
 	private boolean hasMessage() {
